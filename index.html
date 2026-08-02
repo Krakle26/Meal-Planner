@@ -1,0 +1,2833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mise</title>
+<meta name="theme-color" content="#F0F0F1">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#F0F0F1; --panel:#FFFFFF; --ink:#17181B; --muted:#7C7D84;
+  --orange:#E8720C; --orange-soft:#FDF0E4; --orange-ink:#9A4A05;
+  --green:#2F8B5B; --red:#C4402B; --line:#EBEBEE; --line-2:#D8D8DD;
+  --nav-h:62px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:"Figtree",system-ui,-apple-system,sans-serif;
+  font-size:16px; line-height:1.45; overscroll-behavior-y:none;
+}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:none;background:none;padding:0}
+h1,h2,h3,h4{margin:0;letter-spacing:-.025em;line-height:1.2}
+:focus-visible{outline:2px solid var(--orange);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* ---------- frame ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;background:var(--page);
+  padding:calc(env(safe-area-inset-top) + 12px) 18px 10px;
+  display:flex;align-items:center;gap:14px;
+}
+.topbar h1{font-size:22px;font-weight:800;flex:1}
+.icon-btn{
+  width:34px;height:34px;border-radius:50%;background:var(--panel);
+  display:flex;align-items:center;justify-content:center;font-size:15px;
+  border:1px solid var(--line);flex:0 0 auto;
+}
+main{padding:0 10px calc(var(--nav-h) + env(safe-area-inset-bottom) + 22px)}
+.screen{display:none}
+.screen.on{display:block}
+
+.fab{
+  position:fixed;right:16px;z-index:45;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  width:54px;height:54px;border-radius:50%;background:var(--orange);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:400;
+  box-shadow:0 6px 16px rgba(232,114,12,.42);
+}
+.fab:active{transform:scale(.95)}
+.nav{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;
+  background:var(--panel);border-top:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nav button{flex:1;padding:8px 0 7px;font-size:10.5px;color:var(--muted);font-weight:500}
+.nav button .ic{display:block;font-size:18px;margin-bottom:2px;filter:grayscale(1);opacity:.5}
+.nav button.on{color:var(--ink);font-weight:700}
+.nav button.on .ic{filter:none;opacity:1}
+
+/* ---------- panels ---------- */
+.panel{background:var(--panel);border-radius:22px;margin:0 0 10px;padding:18px 0 20px}
+.panel.tight{padding-bottom:16px}
+.panel.pad{padding:18px}
+.ph{display:flex;align-items:baseline;padding:0 18px 12px;gap:10px}
+.ph h2{font-size:19px;font-weight:800;flex:1}
+.ph .act{font-size:13.5px;font-weight:600;color:var(--muted);flex:0 0 auto}
+.ph .act.go{color:var(--orange)}
+.psub{padding:0 18px 12px;font-size:13px;color:var(--muted);margin-top:-6px}
+.hscroll{display:flex;gap:11px;padding:0 18px;overflow-x:auto;scrollbar-width:none}
+.hscroll::-webkit-scrollbar{display:none}
+
+/* ---------- chips ---------- */
+.chip{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:7px;
+  border:1.5px solid var(--line);border-radius:100px;padding:8px 15px;
+  font-size:14px;font-weight:600;white-space:nowrap;background:var(--panel);
+}
+.chip.on{border-color:var(--orange);color:var(--orange);background:var(--orange-soft)}
+.lchip{
+  display:inline-flex;align-items:center;gap:9px;background:var(--orange-soft);
+  color:var(--orange-ink);border-radius:100px;padding:8px 13px;font-size:13.5px;font-weight:600;
+}
+.lchip button{color:inherit;opacity:.6;font-size:15px;line-height:1}
+
+/* ---------- cards ---------- */
+.pic{background:var(--line-2);background-size:cover;background-position:center}
+.big{
+  flex:0 0 auto;width:186px;height:216px;border-radius:15px;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;justify-content:flex-end;padding:13px;text-align:left;
+  background-size:cover;background-position:center;
+}
+.big::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 36%,rgba(12,10,8,.86))}
+.big h3{position:relative;z-index:1;color:#fff;font-size:16.5px;font-weight:800}
+.big .meta{position:relative;z-index:1;color:rgba(255,255,255,.84);font-size:12.5px;font-weight:500;margin-top:5px}
+.tag{
+  position:absolute;top:11px;left:11px;z-index:2;background:rgba(20,16,12,.55);color:#fff;
+  font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:100px;
+}
+.mark{
+  position:absolute;top:9px;right:9px;z-index:2;width:30px;height:30px;border-radius:50%;
+  background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);
+}
+.mark.on{color:var(--orange)}
+.small{flex:0 0 auto;width:132px;text-align:left}
+.small .pic{height:104px;border-radius:13px;position:relative}
+.small h4{font-size:14px;font-weight:600;margin-top:9px;line-height:1.25}
+.small .t{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500}
+
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 18px}
+.gcard{border-radius:15px;overflow:hidden;position:relative;text-align:left;background:var(--page)}
+.gcard .pic{height:118px;position:relative}
+.gcard .body{padding:10px 11px 13px}
+.gcard h4{font-size:14.5px;font-weight:700;line-height:1.22}
+.gcard .t{font-size:12.5px;color:var(--muted);margin-top:4px;font-weight:500}
+
+.tonight{display:flex;gap:13px;align-items:center;padding:0 18px;text-align:left;width:100%}
+.tonight .pic{width:78px;height:78px;border-radius:14px;flex:0 0 auto}
+.tonight h3{font-size:16.5px;font-weight:700}
+.tonight .t{font-size:13px;color:var(--muted);margin-top:5px;font-weight:500}
+
+.match{display:flex;gap:12px;align-items:center;padding:11px 18px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.match:last-child{border-bottom:none}
+.match .pic{width:54px;height:54px;border-radius:12px;flex:0 0 auto}
+.match h4{font-size:14.5px;font-weight:700}
+.match .uses{font-size:12px;color:var(--green);font-weight:700;margin-top:4px}
+.match .n{margin-left:auto;background:var(--green);color:#fff;border-radius:100px;font-size:12px;font-weight:800;padding:4px 10px;flex:0 0 auto}
+
+/* ---------- buttons & inputs ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--orange);color:#fff;border-radius:100px;padding:14px 20px;
+  font-weight:700;font-size:15px;
+}
+.btn.full{display:flex;width:100%}
+.btn.ghost{background:var(--page);color:var(--ink)}
+.btn.line{background:var(--panel);border:1.5px solid var(--line-2);color:var(--ink)}
+.btn.danger{background:var(--panel);border:1.5px solid rgba(196,64,43,.4);color:var(--red)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input[type=text],input[type=url],input[type=number],input[type=password],textarea,select{
+  width:100%;background:var(--page);border:1.5px solid transparent;border-radius:13px;
+  padding:13px 14px;font-size:16px;
+}
+input:focus,textarea:focus{border-color:var(--orange);outline:none}
+textarea{min-height:150px;resize:vertical;line-height:1.5;font-size:15px}
+label.field{display:block;margin-bottom:14px}
+label.field>span{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:7px}
+.search{
+  margin:0 18px 12px;background:var(--panel);border-radius:13px;
+  padding:0;border:1px solid var(--line);
+}
+.search input{background:transparent;border:none;border-radius:13px}
+
+/* ---------- detail ---------- */
+.hero{height:230px;border-radius:22px;position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;overflow:hidden;margin-bottom:10px;background-size:cover;background-position:center}
+.hero::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 34%,rgba(12,10,8,.88))}
+.hero h2{position:relative;z-index:1;color:#fff;font-size:26px;font-weight:800}
+.hero .src{position:relative;z-index:1;color:rgba(255,255,255,.75);font-size:12.5px;font-weight:600;margin-top:6px}
+.hero .back{position:absolute;top:14px;left:14px;z-index:2;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--ink)}
+.strip{display:flex;background:var(--panel);border-radius:18px;margin-bottom:10px;overflow:hidden}
+.strip div{flex:1;padding:14px 8px;text-align:center;border-right:1px solid var(--line)}
+.strip div:last-child{border-right:none}
+.strip b{display:block;font-size:18px;font-weight:800}
+.strip span{font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.scaler{display:flex;align-items:center;gap:12px;padding:0 18px 14px}
+.scaler button{width:38px;height:38px;border-radius:50%;background:var(--page);font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.scaler .val{font-size:14px;font-weight:700;flex:1;text-align:center;color:var(--muted)}
+.ing{display:flex;gap:12px;padding:11px 18px;border-bottom:1px solid var(--line);font-size:15px;align-items:baseline}
+.ing:last-child{border-bottom:none}
+.ing .q{font-weight:800;color:var(--orange);min-width:74px;flex:0 0 auto;font-size:14px}
+.stp{display:flex;gap:13px;padding:13px 18px;border-bottom:1px solid var(--line);font-size:15px;line-height:1.45}
+.stp:last-child{border-bottom:none}
+.stp .n{font-weight:800;color:var(--orange);flex:0 0 auto;font-size:13.5px;padding-top:2px}
+
+/* ---------- recipe tabs & nutrition ---------- */
+.rtabs{display:flex;background:var(--panel);border-radius:22px 22px 0 0;margin-bottom:0;padding:0 4px}
+.rtabs button{
+  flex:1;padding:15px 4px 13px;font-size:14.5px;font-weight:700;color:var(--muted);
+  border-bottom:3px solid transparent;
+}
+.rtabs button.on{color:var(--orange);border-bottom-color:var(--orange)}
+.rtabs + .panel{border-radius:0 0 22px 22px;padding-top:16px}
+
+.lights{display:flex;gap:8px;padding:0 18px}
+.light{
+  flex:1;background:var(--page);border-radius:14px;padding:12px 8px;text-align:center;min-width:0;
+}
+.light .dot{display:block;width:12px;height:12px;border-radius:50%;margin:0 auto 8px}
+.light .lv{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em}
+.light .ll{display:block;font-size:11px;color:var(--muted);font-weight:600;margin-top:3px}
+.light .lb{display:block;font-size:11.5px;font-weight:700;margin-top:4px}
+
+.nrow{display:flex;align-items:baseline;gap:10px;padding:11px 18px;border-bottom:1px solid var(--line)}
+.nrow:last-of-type{border-bottom:none}
+.nrow.sub .nl{padding-left:14px;color:var(--muted);font-weight:500}
+.nrow .nl{flex:1;font-size:15px;font-weight:700}
+.nrow .nv{font-size:15px;font-weight:600}
+.nrow .np{font-size:13px;color:var(--muted);font-weight:600;min-width:44px;text-align:right}
+
+/* ---------- plan ---------- */
+.dayhead{display:flex;align-items:baseline;padding:0 18px 8px;gap:10px}
+.dayhead h3{font-size:16px;font-weight:800;flex:1}
+.dayhead.today h3{color:var(--orange)}
+.dayhead .d{font-size:12.5px;color:var(--muted);font-weight:600}
+.slot{display:flex;gap:11px;align-items:center;padding:8px 18px;width:100%;text-align:left}
+.slot .pic{width:46px;height:46px;border-radius:11px;flex:0 0 auto}
+.slot .lbl{font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.slot h4{font-size:14.5px;font-weight:600;margin-top:3px}
+.slot.empty .pic{background:var(--page);border:1.5px dashed var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--line-2);font-size:20px}
+.slot.empty h4{color:var(--muted);font-weight:500}
+.slot .x{margin-left:auto;color:var(--muted);font-size:17px;padding:6px}
+
+/* ---------- shop ---------- */
+.aisle{display:flex;align-items:center;padding:0 18px 8px;gap:10px}
+.aisle h3{font-size:15px;font-weight:800;flex:1}
+.aisle .c{font-size:12.5px;color:var(--muted);font-weight:600}
+.buy{display:flex;align-items:center;gap:13px;padding:11px 18px;border-bottom:1px solid var(--line);width:100%;text-align:left}
+.buy:last-child{border-bottom:none}
+.box{width:22px;height:22px;border-radius:7px;border:2px solid var(--line-2);flex:0 0 auto;text-align:center;line-height:19px;font-size:12px;color:transparent}
+.buy.done .box{background:var(--green);border-color:var(--green);color:#fff}
+.buy.done .nm{color:var(--muted);text-decoration:line-through}
+.buy .nm{font-size:15px;font-weight:600;flex:1}
+.buy .amt{font-size:13.5px;color:var(--muted);font-weight:700}
+
+/* ---------- empties ---------- */
+.empty{padding:26px 20px;text-align:center;color:var(--muted);font-size:14px}
+.empty strong{display:block;font-size:16.5px;color:var(--ink);margin-bottom:6px;font-weight:700}
+
+/* ---------- cook ---------- */
+#cook{
+  display:none;position:fixed;inset:0;z-index:100;background:var(--page);
+  flex-direction:column;padding:calc(env(safe-area-inset-top) + 10px) 0 calc(env(safe-area-inset-bottom) + 10px);
+}
+#cook.on{display:flex}
+.cooktop{display:flex;align-items:center;gap:12px;padding:6px 18px 12px}
+.cooktop .who{font-size:13.5px;font-weight:700;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.cooktop button{color:var(--muted);font-size:20px;padding:4px 6px}
+.pips{display:flex;gap:5px;padding:0 18px 14px}
+.pips i{flex:1;height:5px;border-radius:3px;background:#DEDEE2}
+.pips i.on{background:var(--orange)}
+.cookcard{background:var(--panel);border-radius:22px;margin:0 10px;padding:22px 20px;flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.cookcard .n{font-size:13px;font-weight:800;color:var(--orange);letter-spacing:.04em;text-transform:uppercase}
+.cookcard .txt{font-size:22px;font-weight:600;line-height:1.36;margin-top:12px}
+.need{margin-top:auto;background:var(--page);border-radius:16px;padding:14px}
+.need span{font-size:12px;color:var(--muted);font-weight:600;display:block;margin-bottom:8px}
+.need p{margin:4px 0;font-size:14.5px;font-weight:600}
+.timerbtn{margin:12px 10px 0;background:var(--panel);border:1.5px solid var(--orange);color:var(--orange);border-radius:100px;text-align:center;padding:13px;font-weight:700;font-size:15px;width:calc(100% - 20px)}
+.timerbtn.running{background:var(--orange);color:#fff}
+.cookbtns{display:flex;gap:10px;padding:10px 10px 0}
+.cookbtns button{flex:1;padding:15px;border-radius:100px;font-weight:700;font-size:15px;background:var(--panel);color:var(--ink)}
+.cookbtns button.go{background:var(--orange);color:#fff}
+.cookbtns button:disabled{opacity:.4}
+
+/* ---------- sheet & toast ---------- */
+.sheet{position:fixed;inset:0;z-index:150;display:none}
+.sheet.on{display:block}
+.sheet .scrim{position:absolute;inset:0;background:rgba(20,20,24,.45)}
+.sheet .panel2{
+  position:absolute;left:0;right:0;bottom:0;max-height:84vh;overflow-y:auto;
+  background:var(--panel);border-radius:24px 24px 0 0;
+  padding:22px 18px calc(24px + env(safe-area-inset-bottom));
+}
+.sheet h3{font-size:20px;font-weight:800;margin-bottom:14px}
+.sheet .muted{color:var(--muted);font-size:14px}
+.pick{width:100%;text-align:left;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px;display:flex;gap:10px;align-items:center;font-weight:600}
+.pick .tag2{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600}
+.toast{
+  position:fixed;left:16px;right:16px;z-index:200;
+  bottom:calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px);
+  background:var(--ink);color:#fff;padding:14px 16px;border-radius:14px;font-size:14.5px;font-weight:500;
+  opacity:0;visibility:hidden;pointer-events:none;transform:translateY(16px);
+  transition:opacity .2s ease,transform .26s cubic-bezier(.2,.8,.3,1),visibility .26s;
+}
+.toast.on{opacity:1;visibility:visible;transform:translateY(0)}
+
+/* On a wide screen keep the app phone-shaped and centred rather than
+   letting rows stretch across a laptop display. */
+@media (min-width:620px){
+  .topbar{max-width:580px;margin:0 auto;padding-left:0;padding-right:0}
+  main{max-width:580px;margin:0 auto}
+  .nav{padding-left:calc(50% - 290px);padding-right:calc(50% - 290px)}
+  .fab{right:calc(50% - 290px + 16px)}
+  .toast{left:auto;right:calc(50% - 290px);width:548px}
+  .sheet .panel2{max-width:580px;left:50%;transform:translateX(-50%);border-radius:24px 24px 0 0}
+  #cook{max-width:580px;left:50%;transform:translateX(-50%)}
+}
+
+/* ---------- add / settings ---------- */
+.tabs{display:flex;gap:8px;padding:0 18px 14px}
+.tabs button{flex:1;padding:10px 4px;border-radius:100px;font-size:13.5px;font-weight:600;background:var(--page);color:var(--muted)}
+.tabs button.on{background:var(--ink);color:#fff}
+.status{font-size:13.5px;padding:12px 14px;margin:12px 0;border-radius:13px;background:var(--orange-soft);color:var(--orange-ink);font-weight:500;line-height:1.45}
+.status.err{background:#FBE9E6;color:#8F2E1E}
+.setrow{padding:0 0 4px}
+.setrow p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1 id="pageTitle">Tonight</h1>
+  <button class="icon-btn" id="syncBtn" aria-label="Sync now" style="display:none">⟳</button>
+  <button class="icon-btn" id="avBtn" aria-label="Settings">⚙</button>
+</div>
+
+<main>
+  <section class="screen on" id="s-home"></section>
+  <section class="screen" id="s-shelf"></section>
+  <section class="screen" id="s-detail"></section>
+  <section class="screen" id="s-plan"></section>
+  <section class="screen" id="s-shop"></section>
+  <section class="screen" id="s-fridge"></section>
+
+  <!-- ADD (static so typing survives re-renders) -->
+  <section class="screen" id="s-add">
+    <div class="panel tight">
+      <div class="ph"><h2>Add a recipe</h2></div>
+      <div class="tabs" id="addTabs">
+        <button data-t="text" class="on">Paste</button>
+        <button data-t="photo">Photo</button>
+        <button data-t="link">Link</button>
+      </div>
+      <div style="padding:0 18px">
+        <div id="tab-text">
+          <label class="field"><span>Recipe text</span>
+            <textarea id="pasteBox" placeholder="Chilli bean stew&#10;Serves 4&#10;&#10;2 tbsp olive oil&#10;1 onion, chopped&#10;400g tin black beans&#10;&#10;Heat the oil and soften the onion for 8 minutes.&#10;Add the beans and simmer for 20 minutes."></textarea>
+          </label>
+          <button class="btn full" id="parseText">Read this recipe</button>
+        </div>
+
+        <div id="tab-photo" style="display:none">
+          <label class="field"><span>Photo of a recipe</span>
+            <input type="file" id="photoIn" accept="image/*" capture="environment">
+          </label>
+          <p class="help" id="photoNote" style="font-size:13px;color:var(--muted)"></p>
+          <div id="ocrStatus"></div>
+        </div>
+
+        <div id="tab-link" style="display:none">
+          <label class="field"><span>Recipe web address</span>
+            <input type="url" id="linkIn" placeholder="https://…">
+          </label>
+          <button class="btn full" id="fetchLink">Fetch recipe</button>
+          <p class="help" style="font-size:13px;color:var(--muted);margin-top:10px">Uses your own fetcher if it is deployed, then falls back to public relays. A relay sees the recipe address, nothing else.</p>
+          <div id="linkStatus"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel tight" id="editWrap" style="display:none">
+      <div class="ph"><h2>Check it over</h2></div>
+      <div style="padding:0 18px">
+        <label class="field"><span>Title</span><input type="text" id="eTitle"></label>
+        <div class="row">
+          <label class="field" style="flex:1"><span>Serves</span><input type="number" id="eServes" min="1" max="24" value="4"></label>
+          <label class="field" style="flex:1"><span>Minutes</span><input type="number" id="eMins" min="0" max="600" value="30"></label>
+        </div>
+        <label class="field"><span>Tags, comma separated</span><input type="text" id="eTags" placeholder="dinner, quick"></label>
+        <label class="field"><span>Ingredients — one per line</span><textarea id="eIng"></textarea></label>
+        <label class="field"><span>Steps — one per line</span><textarea id="eSteps"></textarea></label>
+        <button class="btn full" id="saveRecipe">Save to the shelf</button>
+        <button class="btn line full" id="discardDraft" style="margin-top:10px">Discard this</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="screen" id="s-set">
+    <div class="panel pad">
+      <h2 style="font-size:19px;font-weight:800;margin-bottom:14px">What you don't eat</h2>
+      <label class="field"><span>Never suggest recipes containing</span>
+        <input type="text" id="setAvoid" placeholder="seafood, fish, prawns">
+      </label>
+      <p class="help">Matching recipes are hidden from suggestions and search.</p>
+    </div>
+
+    <div class="panel pad">
+      <h2 style="font-size:19px;font-weight:800;margin-bottom:14px">Sharper reading</h2>
+      <label class="field"><span>Anthropic API key — for reading recipes</span>
+        <input type="password" id="setKey" placeholder="sk-ant-…">
+      </label>
+      <p class="help">Leave blank and Mise reads recipes with its own rules: free, offline, good on tidy layouts. Add a key and messy photos or awkward pages get read far more accurately. The key stays on this phone.</p>
+    </div>
+
+    <div class="panel pad">
+      <h2 style="font-size:19px;font-weight:800;margin-bottom:6px">Sync</h2>
+      <p class="help" style="margin-bottom:14px">Recipes live on this phone. To have the same shelf on another device, connect both to a private store.</p>
+      <div class="row" style="margin-bottom:14px">
+        <button class="chip" id="syncOff">Off</button>
+        <button class="chip" id="syncGist">Private GitHub store</button>
+      </div>
+      <div id="syncPanel" style="display:none">
+        <label class="field"><span>GitHub token — for sync only, not your Anthropic key</span>
+          <input type="password" id="syncToken" placeholder="github_pat_…">
+        </label>
+        <p class="help" style="margin-bottom:14px">Make one at github.com under Settings, Developer settings, Personal access tokens. It only needs gist permission.</p>
+        <div class="row">
+          <button class="btn" id="syncConnect">Connect</button>
+          <button class="btn line" id="syncNowBtn">Sync now</button>
+        </div>
+        <p class="help" id="syncState" style="margin-top:14px"></p>
+        <label class="field" style="margin-top:14px"><span>Store code — paste this on your other device</span>
+          <input type="text" id="syncCode" placeholder="connect first">
+        </label>
+        <button class="btn line full" id="syncJoin">Use that code on this device</button>
+      </div>
+      <div id="syncFile" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
+        <p class="help" style="margin-bottom:12px">No account needed: send a copy to another device and merge it there. Nothing is overwritten — newer edits win on both sides.</p>
+        <div class="row">
+          <button class="btn line" id="sendCopy">Send a copy</button>
+          <button class="btn line" id="mergeCopy">Merge a copy</button>
+        </div>
+        <input type="file" id="mergeFile" accept="application/json" style="display:none">
+      </div>
+    </div>
+
+    <div class="panel pad">
+      <h2 style="font-size:19px;font-weight:800;margin-bottom:10px">This build</h2>
+      <p class="help" id="buildNote" style="margin-bottom:14px"></p>
+      <button class="btn line" id="updBtn">Check for an update</button>
+    </div>
+
+    <div class="panel pad">
+      <h2 style="font-size:19px;font-weight:800;margin-bottom:14px">Your data</h2>
+      <div class="row">
+        <button class="btn line" id="expBtn">Export a backup</button>
+        <button class="btn line" id="impBtn">Restore a backup</button>
+      </div>
+      <input type="file" id="impFile" accept="application/json" style="display:none">
+      <div style="margin-top:12px"><button class="btn danger" id="wipeBtn">Delete everything</button></div>
+      <p class="help" style="margin-top:12px" id="storeNote"></p>
+    </div>
+  </section>
+</main>
+
+<button class="fab" id="fab" aria-label="Add a recipe">＋</button>
+
+<nav class="nav" id="nav">
+  <button data-s="home" class="on"><span class="ic">🏠</span>Home</button>
+  <button data-s="shelf"><span class="ic">📖</span>Shelf</button>
+  <button data-s="plan"><span class="ic">🗓️</span>Plan</button>
+  <button data-s="shop"><span class="ic">🛒</span>Shop</button>
+  <button data-s="fridge"><span class="ic">🧊</span>Fridge</button>
+</nav>
+
+<div id="cook">
+  <div class="cooktop">
+    <span class="who" id="cookName"></span>
+    <button id="cookClose" aria-label="Leave cook mode">✕</button>
+  </div>
+  <div class="pips" id="cookPips"></div>
+  <div class="cookcard" id="cookCard"></div>
+  <div id="cookTimerWrap" style="padding:0 10px"></div>
+  <div class="cookbtns">
+    <button id="cookPrev">Back</button>
+    <button id="cookNext" class="go">Next</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet"><div class="scrim"></div><div class="panel2" id="sheetPanel"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const BUILD = "2026-08-01p";
+const KEY = "mise.v1";
+const Store = (() => {
+  let ok = false;
+  try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); ok = true; } catch(e){ ok = false; }
+  let mem = null;
+  return {
+    persistent: ok,
+    load(){
+      if (ok) { try { const r = localStorage.getItem(KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; } }
+      return mem;
+    },
+    save(d){
+      if (ok) { try { localStorage.setItem(KEY, JSON.stringify(d)); return true; } catch(e){ mem = d; return false; } }
+      mem = d; return false;
+    }
+  };
+})();
+
+const uid = () => Math.random().toString(36).slice(2,10);
+const todayISO = () => new Date().toISOString().slice(0,10);
+const addDays = (iso,n) => { const d = new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+
+let db = Store.load() || null;
+
+/* ============================================================
+   PARSING
+   ============================================================ */
+const FRAC = {"½":.5,"⅓":1/3,"⅔":2/3,"¼":.25,"¾":.75,"⅛":.125,"⅜":.375,"⅝":.625,"⅞":.875,"⅕":.2,"⅖":.4,"⅗":.6,"⅘":.8,"⅙":1/6,"⅚":5/6};
+const UNITS = {
+  g:"g", gram:"g", grams:"g", gr:"g",
+  kg:"kg", kilo:"kg", kilos:"kg", kilogram:"kg", kilograms:"kg",
+  ml:"ml", millilitre:"ml", millilitres:"ml", milliliter:"ml", milliliters:"ml",
+  l:"l", litre:"l", litres:"l", liter:"l", liters:"l",
+  tsp:"tsp", teaspoon:"tsp", teaspoons:"tsp",
+  tbsp:"tbsp", tablespoon:"tbsp", tablespoons:"tbsp", tbs:"tbsp",
+  cup:"cup", cups:"cup",
+  oz:"oz", ounce:"oz", ounces:"oz",
+  lb:"lb", lbs:"lb", pound:"lb", pounds:"lb",
+  pinch:"pinch", pinches:"pinch",
+  clove:"clove", cloves:"clove",
+  tin:"tin", tins:"tin", can:"tin", cans:"tin",
+  handful:"handful", handfuls:"handful",
+  bunch:"bunch", bunches:"bunch",
+  sprig:"sprig", sprigs:"sprig",
+  slice:"slice", slices:"slice",
+  pack:"pack", packs:"pack", packet:"pack", packets:"pack",
+  stick:"stick", sticks:"stick",
+  cm:"cm", inch:"inch", inches:"inch"
+};
+const WORDNUM = {a:1,an:1,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,twelve:12,half:.5,quarter:.25};
+
+function numFrom(tok){
+  if (!tok) return null;
+  let t = tok.trim();
+  if (FRAC[t] !== undefined) return FRAC[t];
+  const mixed = t.match(/^(\d+)\s*([½⅓⅔¼¾⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚])$/);
+  if (mixed) return parseInt(mixed[1]) + FRAC[mixed[2]];
+  const frac = t.match(/^(\d+)\s*\/\s*(\d+)$/);
+  if (frac) return parseInt(frac[1]) / parseInt(frac[2]);
+  const mixedFrac = t.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+  if (mixedFrac) return parseInt(mixedFrac[1]) + parseInt(mixedFrac[2])/parseInt(mixedFrac[3]);
+  if (/^\d+(\.\d+)?$/.test(t)) return parseFloat(t);
+  const w = WORDNUM[t.toLowerCase()];
+  return w !== undefined ? w : null;
+}
+
+function fmtNum(n){
+  if (n === null || n === undefined) return "";
+  const r = Math.round(n*100)/100;
+  if (Math.abs(r - Math.round(r)) < 0.01) return String(Math.round(r));
+  const near = {0.25:"¼",0.33:"⅓",0.5:"½",0.67:"⅔",0.75:"¾"};
+  const whole = Math.floor(r), rem = Math.round((r-whole)*100)/100;
+  for (const k in near) if (Math.abs(rem - parseFloat(k)) < 0.03) return (whole ? whole : "") + near[k];
+  return String(r);
+}
+
+function parseIngredient(raw){
+  let line = raw.replace(/^[-•*·–—\s]+/, "").trim();
+  if (!line) return null;
+  let note = "";
+  const comma = line.indexOf(",");
+  if (comma > 0 && comma > line.length * 0.35) { note = line.slice(comma+1).trim(); line = line.slice(0, comma).trim(); }
+
+  let qty = null, unit = "";
+  const numRe = /^(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+\s*[½⅓⅔¼¾⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚]|[½⅓⅔¼¾⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚]|\d+(?:\.\d+)?)\s*/;
+  let m = line.match(numRe);
+  if (m) { qty = numFrom(m[1]); line = line.slice(m[0].length); }
+  else {
+    const w = line.match(/^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|half|quarter)\s+(of\s+)?/i);
+    if (w) { qty = WORDNUM[w[1].toLowerCase()]; line = line.slice(w[0].length); }
+  }
+  // "400g" style — unit glued to number
+  const glued = line.match(/^(g|kg|ml|l|oz|lb)\b\.?\s*/i);
+  if (glued && qty !== null) { unit = UNITS[glued[1].toLowerCase()]; line = line.slice(glued[0].length); }
+  else {
+    const u = line.match(/^([a-z]+)\b\.?\s*/i);
+    if (u && UNITS[u[1].toLowerCase()]) { unit = UNITS[u[1].toLowerCase()]; line = line.slice(u[0].length); }
+  }
+  line = line.replace(/^(?:of\s+)?(?:an?|the)\s+/i, "").replace(/^of\s+/i,"").trim();
+  if (!line) { line = note; note = ""; }
+  if (!line) return null;
+  return { qty, unit, name: line.replace(/\s+/g," "), note };
+}
+
+const STOP = new Set(["fresh","freshly","large","small","medium","chopped","diced","sliced","minced","ground","finely","roughly","plain","free","range","ripe","whole","dried","tinned","of","the","a","an","and","or","to","taste","good","quality","extra","virgin","optional","for","serving","plus","more"]);
+function ingKey(name){
+  return name.toLowerCase()
+    .replace(/\(.*?\)/g,"").replace(/[^a-z\s]/g," ")
+    .split(/\s+/).filter(w => w && !STOP.has(w))
+    .map(w => w.endsWith("ies") ? w.slice(0,-3)+"y" : (w.endsWith("es") && w.length>4 ? w.slice(0,-2) : (w.endsWith("s") && !w.endsWith("ss") ? w.slice(0,-1) : w)))
+    .join(" ").trim();
+}
+
+function parseRecipeText(text){
+  const lines = text.replace(/\r/g,"").split("\n").map(l => l.trim());
+  let title = "", serves = 4, mins = 0;
+  const ing = [], steps = [];
+  let mode = "head";
+
+  let blankBefore = false;
+  for (let i = 0; i < lines.length; i++){
+    const l = lines[i];
+    if (!l) { blankBefore = true; continue; }
+    const gap = blankBefore; blankBefore = false;
+    const low = l.toLowerCase();
+    if (!title && mode === "head" && l.length < 90 && !/^\d/.test(l)) { title = l.replace(/[:.]$/,""); continue; }
+    const sv = low.match(/(?:serves|servings?|makes|feeds)\D{0,4}(\d+)/);
+    if (sv) { serves = Math.min(24, parseInt(sv[1])); continue; }
+    // A timing line is short and labelled ("Total time: 45 min"). A method
+    // step that happens to mention minutes must never be mistaken for one.
+    if (!mins && l.length < 46 && /\b(time|ready in|takes)\b/.test(low)){
+      const tm = low.match(/(\d+)\s*(?:hr|hour)s?\s*(?:(\d+)\s*min)?|(\d+)\s*min/);
+      if (tm){ mins = tm[1] ? parseInt(tm[1])*60 + (tm[2]?parseInt(tm[2]):0) : parseInt(tm[3]); continue; }
+    }
+    if (/^(ingredients|you(?:'ll)? need|for the)\b/i.test(l)) { mode = "ing"; if (/^for the/i.test(l)) ing.push({heading:l.replace(/[:]$/,"")}); continue; }
+    if (/^(method|instructions?|steps|directions|to cook|how to)\b/i.test(l)) { mode = "steps"; continue; }
+
+    const looksStep = l.length > 70 || /^\d+[.)]\s/.test(l) || /^(heat|add|stir|cook|simmer|bake|season|serve|preheat|mix|pour|bring|remove|place|fry|roast|drain|whisk|combine|reduce|cover|chop|slice|put|leave|transfer|scatter|finish|meanwhile|once|when)\b/i.test(l);
+    const looksIng = /^[\d½⅓⅔¼¾⅛]/.test(l) || (l.length < 62 && /^(a|an|one|two|three|four|five|six|handful|pinch|bunch|salt|pepper|olive oil)\b/i.test(l));
+
+    // Plenty of recipes have no "Method" heading. A line that is numbered,
+    // long, or a full sentence — and doesn't open with a quantity — ends
+    // the ingredient list on its own.
+    const startsQty = /^[\d½⅓⅔¼¾⅛⅜⅝⅞]/.test(l);
+    const words = l.split(/\s+/).length;
+    const strongStep = /^\d+[.)]\s/.test(l) ||
+      (!startsQty && (l.length > 70 || (/[.!]$/.test(l) && words >= 5) || (gap && words >= 4)));
+
+    if (mode === "steps" || (mode === "ing" && strongStep) || (mode !== "ing" && looksStep && !looksIng)) {
+      mode = "steps";
+      steps.push(l.replace(/^\d+[.)]\s*/,""));
+    } else {
+      mode = mode === "head" ? "ing" : mode;
+      const p = parseIngredient(l);
+      if (p) ing.push(p);
+    }
+  }
+  if (!title) title = "Untitled recipe";
+  if (!mins) mins = 30;
+  return { title, serves, mins, ing: ing.filter(x => !x.heading), steps };
+}
+
+/* ---- getting a recipe out of a fetched page ----
+   Four routes, best first. Sites vary wildly, so if one comes up empty
+   the next one tries a different assumption about the markup. */
+
+const stripTags = s => String(s).replace(/<[^>]*>/g,"")
+  .replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/&quot;/g,'"')
+  .replace(/&nbsp;/g," ").replace(/&frac12;/g,"½").replace(/&frac14;/g,"¼")
+  .replace(/\s+/g," ").trim();
+
+function domFrom(html){
+  try { return new DOMParser().parseFromString(html, "text/html"); } catch(e){ return null; }
+}
+
+function durMins(d){
+  if (!d) return 0;
+  const m = String(d).match(/P(?:T)?(?:(\d+)H)?(?:(\d+)M)?/);
+  return m ? (m[1]?parseInt(m[1])*60:0) + (m[2]?parseInt(m[2]):0) : 0;
+}
+
+/* ---- nutrition ----
+   Only ever from real sources: what the recipe site published, or an
+   explicit estimate the user asked for. Nothing is inferred quietly. */
+function nutNum(v){
+  if (v === null || v === undefined) return null;
+  const m = String(v).replace(/,/g,"").match(/(\d+(?:\.\d+)?)/);
+  return m ? parseFloat(m[1]) : null;
+}
+function nutMg(v){
+  const n = nutNum(v); if (n === null) return null;
+  const s = String(v).toLowerCase();
+  if (s.includes("mg")) return n;
+  if (/\bg\b/.test(s)) return n * 1000;
+  return n;
+}
+function parseNutrition(n){
+  if (!n || typeof n !== "object") return null;
+  const out = {
+    kcal: nutNum(n.calories),
+    fat: nutNum(n.fatContent),
+    sat: nutNum(n.saturatedFatContent),
+    carbs: nutNum(n.carbohydrateContent),
+    sugars: nutNum(n.sugarContent),
+    protein: nutNum(n.proteinContent),
+    sodiumMg: nutMg(n.sodiumContent),
+    fibre: nutNum(n.fiberContent),
+    serving: n.servingSize ? String(n.servingSize).slice(0,40) : "",
+    source: "site"
+  };
+  const real = ["kcal","fat","sat","carbs","sugars","protein","sodiumMg","fibre"]
+    .some(k => typeof out[k] === "number" && out[k] > 0);
+  return real ? out : null;
+}
+
+/* 1. schema.org JSON-LD — what most recipe sites publish. */
+function fromJsonLd(html, doc){
+  const blobs = [];
+  if (doc){
+    doc.querySelectorAll('script[type*="ld+json" i]').forEach(s => blobs.push(s.textContent));
+  } else {
+    const re = /<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi;
+    let m; while ((m = re.exec(html))) blobs.push(m[1]);
+  }
+
+  const out = [];
+  for (const b of blobs){
+    try {
+      const j = JSON.parse(String(b).trim());
+      const push = o => { if (o && typeof o === "object") out.push(o); };
+      if (Array.isArray(j)) j.forEach(push);
+      else { push(j); if (Array.isArray(j["@graph"])) j["@graph"].forEach(push); }
+    } catch(e){}
+  }
+
+  const isRecipe = o => { const t = o["@type"]; return t === "Recipe" || (Array.isArray(t) && t.includes("Recipe")); };
+  const r = out.find(isRecipe);
+  if (!r) return null;
+
+  const ingLines = (r.recipeIngredient || r.ingredients || []).map(stripTags).filter(Boolean);
+  if (!ingLines.length) return null;
+
+  const flat = [];
+  const walk = x => {
+    if (!x) return;
+    if (Array.isArray(x)) return x.forEach(walk);
+    if (typeof x === "string") return flat.push(stripTags(x));
+    if (x.itemListElement) return walk(x.itemListElement);
+    if (x.text) return flat.push(stripTags(x.text));
+    if (x.name) return flat.push(stripTags(x.name));
+  };
+  walk(r.recipeInstructions);
+
+  let serves = 4;
+  const y = Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield;
+  if (y){ const n = String(y).match(/\d+/); if (n) serves = Math.min(24, parseInt(n[0])); }
+
+  const mins = durMins(r.totalTime) || (durMins(r.prepTime) + durMins(r.cookTime)) || 30;
+
+  let img = "";
+  const im = r.image;
+  if (typeof im === "string") img = im;
+  else if (Array.isArray(im)) img = typeof im[0] === "string" ? im[0] : (im[0] && im[0].url) || "";
+  else if (im && im.url) img = im.url;
+
+  return {
+    title: stripTags(r.name || "Untitled recipe"),
+    serves, mins, image: img,
+    nutrition: parseNutrition(r.nutrition),
+    ing: ingLines.map(parseIngredient).filter(Boolean),
+    steps: flat.filter(s => s.length > 3)
+  };
+}
+
+/* 2. Microdata — older sites tag the markup itself. */
+function fromMicrodata(doc){
+  if (!doc) return null;
+  const scope = doc.querySelector('[itemtype*="Recipe" i]') || doc;
+  const txt = el => (el.getAttribute("content") || el.textContent || "").trim();
+
+  const ing = [...scope.querySelectorAll('[itemprop="recipeIngredient"],[itemprop="ingredients"]')]
+    .map(txt).filter(Boolean);
+  if (!ing.length) return null;
+
+  let steps = [];
+  const insNodes = [...scope.querySelectorAll('[itemprop="recipeInstructions"]')];
+  for (const n of insNodes){
+    const inner = [...n.querySelectorAll("li,p")].map(x => x.textContent.trim()).filter(s => s.length > 3);
+    if (inner.length) steps.push(...inner);
+    else { const t = txt(n); if (t.length > 3) steps.push(t); }
+  }
+  if (steps.length === 1 && steps[0].length > 200){
+    steps = steps[0].split(/(?<=[.!])\s+(?=[A-Z])/).map(s => s.trim()).filter(s => s.length > 10);
+  }
+
+  const nameEl = scope.querySelector('[itemprop="name"]');
+  const yieldEl = scope.querySelector('[itemprop="recipeYield"]');
+  const timeEl = scope.querySelector('[itemprop="totalTime"],[itemprop="cookTime"]');
+  const imgEl = scope.querySelector('[itemprop="image"]');
+
+  let serves = 4;
+  if (yieldEl){ const n = txt(yieldEl).match(/\d+/); if (n) serves = Math.min(24, parseInt(n[0])); }
+
+  const nut = {};
+  [["calories","calories"],["fatContent","fatContent"],["saturatedFatContent","saturatedFatContent"],
+   ["carbohydrateContent","carbohydrateContent"],["sugarContent","sugarContent"],
+   ["proteinContent","proteinContent"],["sodiumContent","sodiumContent"],["fiberContent","fiberContent"]]
+   .forEach(([prop,key]) => {
+     const el = scope.querySelector('[itemprop="' + prop + '"]');
+     if (el) nut[key] = txt(el);
+   });
+
+  return {
+    title: nameEl ? txt(nameEl) : (doc.querySelector("h1")?.textContent.trim() || "Untitled recipe"),
+    nutrition: parseNutrition(nut),
+    serves,
+    mins: timeEl ? (durMins(timeEl.getAttribute("datetime") || txt(timeEl)) || 30) : 30,
+    image: imgEl ? (imgEl.getAttribute("src") || imgEl.getAttribute("content") || "") : "",
+    ing: ing.map(parseIngredient).filter(Boolean),
+    steps
+  };
+}
+
+/* 3. Headings — no structured data, but the page still says "Ingredients". */
+function fromHeadings(doc){
+  if (!doc) return null;
+  const heads = [...doc.querySelectorAll("h1,h2,h3,h4,h5,strong,b,dt")];
+
+  const listAfter = (re) => {
+    for (const h of heads){
+      const t = (h.textContent || "").trim();
+      if (!re.test(t) || t.length > 40) continue;
+      let n = h.nextElementSibling, hops = 0;
+      while (n && hops++ < 8){
+        const list = /^(UL|OL)$/.test(n.tagName) ? n : n.querySelector && n.querySelector("ul,ol");
+        if (list){
+          const items = [...list.querySelectorAll("li")].map(li => li.textContent.trim()).filter(Boolean);
+          if (items.length > 1) return items;
+        }
+        n = n.nextElementSibling;
+      }
+      // Some layouts put the heading inside a wrapper alongside the list.
+      const near = h.parentElement && h.parentElement.querySelector("ul,ol");
+      if (near){
+        const items = [...near.querySelectorAll("li")].map(li => li.textContent.trim()).filter(Boolean);
+        if (items.length > 1) return items;
+      }
+    }
+    return null;
+  };
+
+  const parasAfter = (re) => {
+    for (const h of heads){
+      const t = (h.textContent || "").trim();
+      if (!re.test(t) || t.length > 40) continue;
+      const out = [];
+      let n = h.nextElementSibling, hops = 0;
+      while (n && hops++ < 25){
+        if (/^H[1-4]$/.test(n.tagName)) break;
+        if (/comment|respond|reply|sidebar|related/i.test((n.className || "") + " " + (n.id || ""))) break;
+        if (n.tagName === "P"){
+          const s = n.textContent.trim();
+          if (isChatter(s)) break;
+          if (s.length > 15) out.push(s);
+        }
+        n = n.nextElementSibling;
+      }
+      if (out.length) return out;
+    }
+    return null;
+  };
+
+  const ing = listAfter(/ingredient/i);
+  if (!ing) return null;
+  const steps = listAfter(/method|instruction|direction|step|preparation/i) ||
+                parasAfter(/method|instruction|direction|step|preparation/i) || [];
+
+  const body = doc.body ? doc.body.textContent : "";
+  const sv = body.match(/serves\D{0,4}(\d+)/i);
+  const tm = body.match(/(\d+)\s*min/i);
+
+  return {
+    title: (doc.querySelector("h1")?.textContent || doc.title || "Untitled recipe").trim().slice(0,120),
+    serves: sv ? Math.min(24, parseInt(sv[1])) : 4,
+    mins: tm ? parseInt(tm[1]) : 30,
+    image: "",
+    ing: ing.map(parseIngredient).filter(Boolean),
+    steps
+  };
+}
+
+/* 4. Plain text — for relays that return markdown, or as a last resort.
+   Recipe plugins leave a lot of furniture in the text: checkbox glyphs,
+   "Cook Mode", nutrition tables, comment threads. This walks the page by
+   section instead of trusting the shape of individual lines. */
+function fromPlainText(text){
+  const raw = String(text).split("\n");
+
+  let title = "";
+  const tl = text.match(/^\s*title:\s*(.+)$/im);
+  if (tl) title = tl[1].split(/\s+[-–|]\s+/)[0].trim();
+  if (!title){
+    const h = raw.find(l => /^#\s+\S/.test(l.trim()));
+    if (h) title = h.replace(/^#+\s*/,"").trim();
+  }
+
+  const clean = s => s
+    .replace(/!\[[^\]]*\]\([^)]*\)/g,"")          // images
+    .replace(/\[([^\]]*)\]\([^)]*\)/g,"$1")       // links, keep the words
+    .replace(/<https?:\/\/[^>]*>/g,"")            // bare autolinks
+    .replace(/^\s*[-*+]\s*\[[ xX]\]\s*/,"")       // task checkboxes
+    .replace(/[▢□☐✓]/g,"")                        // plugin tick glyphs
+    .replace(/^\s*#+\s*/,"")                      // headings
+    .replace(/^\s*[-*+]\s+/,"")                   // bullets
+    .replace(/\*\*|__/g,"")
+    .replace(/\s+/g," ")
+    .trim();
+
+  const lines = raw.map(clean);
+
+  const findFrom = (from, re) => {
+    for (let i = from; i < lines.length; i++){
+      const l = lines[i];
+      if (l && l.length < 44 && re.test(l)) return i;
+    }
+    return -1;
+  };
+
+  // "What ingredients are in…" is prose, not the list — the heading match
+  // is anchored and length-capped so section headings win.
+  const iIng = findFrom(0, /^ingredients?\b/i);
+  if (iIng < 0) return null;
+
+  const iStep = findFrom(iIng + 1, /^(instructions?|method|directions?|steps|preparation|to cook)\b/i);
+  const iEnd = findFrom(iStep > 0 ? iStep + 1 : iIng + 1,
+    /^(notes?|nutrition|video|comments?|reviews?|\d+\s*comments?|leave a (comment|reply|review)|reader interactions|rate this|you (might|may) also|similar recipes|related recipes?|more \w|subscribe|print recipe)/i);
+
+  const junk = /^(equipment|cook mode|prevent your screen|course|cuisine|calories|carbohydrates|protein|prep time|cook time|total time|servings?|save|saved|print|pin|rate|jump to|by \w+$)/i;
+
+  const ingEnd = iStep > 0 ? iStep : (iEnd > 0 ? iEnd : lines.length);
+  const ing = [];
+  for (let i = iIng + 1; i < ingEnd; i++){
+    const l = lines[i];
+    if (!l || l.length < 2 || l.length > 90 || junk.test(l)) continue;
+    const p = parseIngredient(l);
+    if (p && p.name && p.name.length > 1) ing.push(p);
+  }
+  if (!ing.length) return null;
+
+  const steps = [];
+  if (iStep > 0){
+    const stop = iEnd > 0 ? iEnd : lines.length;
+    for (let i = iStep + 1; i < stop; i++){
+      const l = lines[i];
+      if (!l || l.length < 15 || junk.test(l)) continue;
+      steps.push(l);
+    }
+  }
+
+  // Recipe cards run these words together — "Servings6 people".
+  let serves = 4;
+  const sv = text.match(/servings?\s*:?\s*(\d+)/i) || text.match(/serves\s*:?\s*(\d+)/i);
+  if (sv) serves = Math.min(24, parseInt(sv[1]));
+
+  const timeNear = label => {
+    const m = text.match(new RegExp(label + "[^\\n]{0,44}", "i"));
+    if (!m) return 0;
+    const h = m[0].match(/(\d+)\s*(hours?|hrs?)\b/i);
+    const mm = m[0].match(/(\d+)\s*(minutes?|mins?)\b/i);
+    return (h ? parseInt(h[1])*60 : 0) + (mm ? parseInt(mm[1]) : 0);
+  };
+  const mins = timeNear("total time") || (timeNear("prep time") + timeNear("cook time")) || 30;
+
+  return {
+    title: (title || "Untitled recipe").slice(0,120),
+    serves, mins, image: "",
+    ing, steps
+  };
+}
+
+/* A recipe page doesn't end where the recipe does. Below the method sit
+   comment threads, ratings, newsletter pitches and related-recipe lists,
+   and a parser reading the page as text will happily swallow them. These
+   are the markers that say "the recipe stopped here". */
+const CHATTER = [
+  /\bsays\s*:/i,
+  /^reply\b/i,
+  /^\d+\s*(comments?|replies|reviews?)\b/i,
+  /^comments?\s*\(?\d*\)?$/i,
+  /leave a (comment|reply|review)/i,
+  /your email address/i,
+  /required fields are marked/i,
+  /^rate (this|the) recipe/i,
+  /^[★☆⭐]{2,}/,
+  /^(subscribe|sign up|follow us|share this)\b/i,
+  /^print (the )?recipe/i,
+  /^you (might|may) also\b/i,
+  /^(related|similar|more) recipes?\b/i,
+  /^reader interactions/i,
+  /^(primary sidebar|footer|newsletter|about the author)/i,
+  /^posted on\b/i,
+  /^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\b/i,
+  /^(this (site|post) (uses|contains)|as an amazon associate)/i
+];
+function isChatter(t){
+  const s = String(t || "").trim();
+  if (!s) return false;
+  return CHATTER.some(re => re.test(s));
+}
+
+/* Everything from the first comment onwards is comments — cut, don't sieve. */
+function cutChatter(list, get){
+  const idx = list.findIndex(x => isChatter(get ? get(x) : x));
+  const kept = idx > -1 ? list.slice(0, idx) : list;
+  return kept.filter(x => !isChatter(get ? get(x) : x));
+}
+
+function sanitiseRecipe(d){
+  if (!d) return d;
+  if (Array.isArray(d.steps)) d.steps = cutChatter(d.steps);
+  if (Array.isArray(d.ing)) d.ing = cutChatter(d.ing, i => i && i.name);
+  if (d.title && isChatter(d.title)) d.title = "Untitled recipe";
+  return d;
+}
+
+function extractRecipe(html){
+  // A markdown page containing <https://example.com> is not HTML. Look for
+  // real structural tags rather than anything inside angle brackets.
+  const head = html.slice(0, 6000);
+  const looksHtml = /<(html|head|body|div|p|ul|li|script|article|section|span)[\s>]/i.test(head);
+  const doc = looksHtml ? domFrom(html) : null;
+
+  const routes = [
+    ["structured recipe data", () => fromJsonLd(html, doc)],
+    ["tagged markup", () => fromMicrodata(doc)],
+    ["the page headings", () => fromHeadings(doc)],
+    ["the page text", () => fromPlainText(doc ? (doc.body ? doc.body.innerText || doc.body.textContent : html) : html)]
+  ];
+
+  for (const [how, fn] of routes){
+    try {
+      const d = sanitiseRecipe(fn());
+      if (d && d.ing.length && d.steps.length) return { d, how };
+    } catch(e){}
+  }
+  // Ingredients without steps still beats nothing — the form is editable.
+  for (const [how, fn] of routes){
+    try {
+      const d = sanitiseRecipe(fn());
+      if (d && d.ing.length) return { d, how };
+    } catch(e){}
+  }
+  return null;
+}
+
+/* ---- optional: sharper reading via the user's own API key ---- */
+async function aiParse(text){
+  const key = db.settings.apiKey;
+  if (!key) return null;
+  const prompt = `Turn the following into JSON only — no prose, no markdown fences.
+Shape: {"title":string,"serves":number,"mins":number,"tags":string[],"ing":string[],"steps":string[]}
+"ing" entries keep their quantity, e.g. "400g tin chopped tomatoes". "steps" are plain sentences in order.
+
+TEXT:
+${text.slice(0,12000)}`;
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:2000, messages:[{role:"user",content:prompt}] })
+  });
+  if (!res.ok) throw new Error("Key rejected (" + res.status + ")");
+  const data = await res.json();
+  const txt = (data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("").replace(/```json|```/g,"").trim();
+  const j = JSON.parse(txt);
+  return {
+    title: j.title || "Untitled recipe",
+    serves: Math.min(24, j.serves || 4),
+    mins: j.mins || 30,
+    tags: j.tags || [],
+    ing: (j.ing||[]).map(parseIngredient).filter(Boolean),
+    steps: j.steps || []
+  };
+}
+
+/* ============================================================
+   AISLES
+   ============================================================ */
+const AISLES = [
+  ["Fruit & veg", ["onion","garlic","carrot","potato","tomato","cabbage","leek","celery","peppers","bell pepper","red pepper","green pepper","chilli","spinach","kale","broccoli","cauliflower","mushroom","courgette","aubergine","lemon","lime","apple","banana","ginger","herb","parsley","coriander","basil","thyme","rosemary","mint","salad","lettuce","cucumber","avocado","sweet potato","squash","pea","bean sprout","spring onion","shallot","orange","berry","pear","peach","beetroot","parsnip","turnip","swede","sprout","corn","radish","fennel"]],
+  ["Meat & poultry", ["chicken","beef","pork","lamb","mince","bacon","sausage","steak","turkey","ham","chorizo","gammon"]],
+  ["Dairy & chilled", ["milk","butter","cheese","cream","yoghurt","yogurt","egg","creme fraiche","mozzarella","parmesan","cheddar","feta","halloumi","paneer","tofu","margarine"]],
+  ["Tins & jars", ["tin","tinned","chickpea","black bean","kidney bean","butter bean","passata","chopped tomato","coconut milk","stock","broth","olives","caper","anchovy","paste","jar","baked bean","sweetcorn"]],
+  ["Dry goods", ["flour","sugar","rice","pasta","spaghetti","noodle","oat","couscous","quinoa","bread","breadcrumb","tortilla","polenta","barley","lentil","cornflour","yeast","baking powder","bicarbonate","nut","almond","walnut","cashew","raisin","sesame","sunflower seed","pumpkin seed","chocolate","cocoa"]],
+  ["Oils, sauces & spice", ["oil","vinegar","soy","salt","pepper","cumin","paprika","turmeric","cinnamon","coriander seed","chilli flake","curry powder","garam masala","oregano","bay","mustard","honey","syrup","ketchup","worcestershire","harissa","tahini","miso","sriracha","stock cube","spice","seasoning","caraway","fennel seed","mustard seed","seeds","peppercorn","black pepper"]]
+];
+function aisleOf(name, unit){
+  const k = " " + name.toLowerCase() + " ";
+  // A tin of tomatoes belongs with the tins, not the fresh tomatoes.
+  if (unit === "tin") return "Tins & jars";
+  if (/\b(tin|tinned|can|canned|jar|jarred|carton)\b/.test(k)) return "Tins & jars";
+  for (const [aisle, words] of AISLES) if (words.some(w => k.includes(w))) return aisle;
+  return "Everything else";
+}
+
+/* ============================================================
+   SEED SHELF — a starting set so leftovers have something to match
+   ============================================================ */
+function seedRecipes(){
+  const R = (title,mins,serves,tags,ing,steps) => ({
+    id: uid(), title, mins, serves, tags, fav:false, source:"Built in", image:"",
+    ing: ing.map(parseIngredient).filter(Boolean), steps, added: Date.now(), updated: Date.now()
+  });
+  return [
+    R("Cabbage and bacon fry-up",20,2,["quick","dinner"],
+      ["2 tbsp olive oil","6 rashers smoked bacon, chopped","half a cabbage, shredded","1 onion, sliced","2 cloves garlic, crushed","1 tsp caraway seeds","salt and pepper"],
+      ["Heat the oil in a wide pan and fry the bacon over medium heat until the fat runs and the edges crisp, about 6 minutes.",
+       "Add the onion and cook for 5 minutes until soft and golden at the edges.",
+       "Stir in the garlic and caraway and cook for 1 minute until fragrant.",
+       "Pile in the cabbage, season well, and toss over high heat for 6 minutes so it wilts but keeps some bite.",
+       "Taste, add more pepper, and serve straight from the pan."]),
+    R("Everyday tomato pasta",25,4,["dinner","vegetarian","quick"],
+      ["400g spaghetti","3 tbsp olive oil","4 cloves garlic, thinly sliced","1 tsp chilli flakes","2 tins chopped tomatoes","1 tsp sugar","a handful of basil","50g parmesan, grated","salt"],
+      ["Bring a large pan of well-salted water to the boil.",
+       "Warm the oil in a wide pan and cook the garlic gently for 2 minutes — it should turn pale gold, never brown.",
+       "Add the chilli flakes, tomatoes and sugar. Simmer for 15 minutes until the sauce is thick and glossy.",
+       "Cook the spaghetti until just short of tender, then lift it into the sauce with a splash of its water.",
+       "Toss hard for 1 minute so the sauce clings, then fold through the basil and parmesan."]),
+    R("Roast chicken thighs with potatoes",55,4,["dinner","roast"],
+      ["8 chicken thighs, skin on","1 kg potatoes, cut into chunks","1 lemon, cut into wedges","6 cloves garlic, unpeeled","3 tbsp olive oil","2 sprigs rosemary","salt and pepper"],
+      ["Heat the oven to 200C fan.",
+       "Toss the potatoes, garlic and rosemary with the oil in a large roasting tin and season generously.",
+       "Sit the chicken thighs on top, skin up, salt the skin hard, and tuck in the lemon wedges.",
+       "Roast for 45 minutes until the skin is crisp and the potatoes have caught colour underneath.",
+       "Rest for 5 minutes, then squeeze over the softened lemon."]),
+    R("Red lentil dal",35,4,["dinner","vegetarian","batch"],
+      ["300g red lentils, rinsed","2 tbsp oil","1 onion, finely chopped","3 cloves garlic, crushed","2 cm ginger, grated","2 tsp cumin","1 tsp turmeric","1 tin chopped tomatoes","900 ml stock","salt","a handful of coriander"],
+      ["Warm the oil and cook the onion for 8 minutes until soft and sweet.",
+       "Add the garlic, ginger and spices and stir for 1 minute.",
+       "Tip in the lentils, tomatoes and stock. Bring to the boil.",
+       "Simmer uncovered for 25 minutes, stirring now and then, until the lentils collapse into a thick puree.",
+       "Season well and scatter with coriander."]),
+    R("Leftover vegetable soup",40,4,["batch","vegetarian","leftovers"],
+      ["2 tbsp olive oil","1 onion, chopped","2 carrots, chopped","2 sticks celery, chopped","3 cloves garlic, sliced","800 g mixed vegetables, chopped","1 tin chopped tomatoes","1.2 l stock","1 bay leaf","salt and pepper"],
+      ["Heat the oil and sweat the onion, carrot and celery gently for 10 minutes without colouring.",
+       "Add the garlic and cook for 1 minute.",
+       "Add whatever vegetables need using, the tomatoes, stock and bay leaf.",
+       "Simmer for 25 minutes until everything is tender.",
+       "Blend half of it for body, leave the rest chunky, then season hard."]),
+    R("Cheese and onion frittata",25,3,["quick","vegetarian","lunch"],
+      ["8 eggs","2 tbsp butter","2 onions, thinly sliced","120 g cheddar, grated","a handful of parsley, chopped","salt and pepper"],
+      ["Melt the butter in an ovenproof frying pan and cook the onions slowly for 12 minutes until sweet and golden.",
+       "Beat the eggs with the parsley, most of the cheese, and plenty of salt and pepper.",
+       "Pour the eggs over the onions and cook on low for 6 minutes until the edges set.",
+       "Scatter the last of the cheese on top and slide under a hot grill for 3 minutes until puffed and set.",
+       "Rest for 2 minutes before cutting into wedges."]),
+    R("Chickpea and spinach curry",30,4,["dinner","vegetarian","quick"],
+      ["2 tbsp oil","1 onion, chopped","3 cloves garlic, crushed","2 tbsp curry powder","2 tins chickpeas, drained","1 tin coconut milk","200 g spinach","1 lemon","salt"],
+      ["Cook the onion in the oil for 8 minutes until soft.",
+       "Add the garlic and curry powder and fry for 1 minute until it smells toasty.",
+       "Tip in the chickpeas and coconut milk and simmer for 12 minutes to thicken.",
+       "Stir the spinach through in handfuls until it wilts.",
+       "Finish with a good squeeze of lemon and plenty of salt."]),
+    R("Sausage and bean stew",45,4,["dinner","batch"],
+      ["8 sausages","1 tbsp oil","1 onion, chopped","2 carrots, chopped","3 cloves garlic, sliced","1 tsp smoked paprika","1 tin chopped tomatoes","2 tins butter beans, drained","300 ml stock","salt and pepper"],
+      ["Brown the sausages in the oil over medium heat for 8 minutes, turning, then lift out.",
+       "Cook the onion and carrot in the same pan for 8 minutes.",
+       "Add the garlic and paprika, then the tomatoes, beans and stock.",
+       "Return the sausages, cover, and simmer for 25 minutes until thick.",
+       "Season and let it sit off the heat for 5 minutes before serving."]),
+    R("Fried rice with whatever's left",15,2,["quick","leftovers"],
+      ["2 tbsp oil","2 eggs, beaten","1 onion, chopped","2 cloves garlic, crushed","400 g cold cooked rice","200 g mixed vegetables, chopped small","2 tbsp soy sauce","2 spring onions, sliced"],
+      ["Get a wok or wide pan very hot with half the oil, pour in the eggs, scramble for 30 seconds and tip out.",
+       "Add the rest of the oil, then the onion, and stir-fry for 3 minutes.",
+       "Add the garlic and vegetables and keep everything moving for 4 minutes.",
+       "Break in the cold rice and fry hard for 4 minutes until it starts to crackle.",
+       "Return the egg, splash in the soy, and finish with spring onions."]),
+    R("Apple and oat crumble",50,6,["pudding","batch"],
+      ["6 apples, peeled and sliced","2 tbsp sugar","1 tsp cinnamon","150 g flour","100 g cold butter, cubed","80 g oats","80 g brown sugar"],
+      ["Heat the oven to 190C fan.",
+       "Toss the apples with the sugar and cinnamon and tip into a baking dish.",
+       "Rub the butter into the flour with your fingertips until it looks like coarse breadcrumbs, then stir in the oats and brown sugar.",
+       "Scatter the topping over the fruit without pressing it down.",
+       "Bake for 40 minutes until the top is deep gold and the fruit bubbles at the edges."])
+  ];
+}
+
+function freshDb(){
+  return {
+    recipes: seedRecipes(),
+    plan: {},
+    planTs: {},
+    leftovers: [],
+    ticked: {},
+    deleted: {},
+    settings: { avoid: "seafood, fish, prawn, shrimp, salmon, tuna, cod, crab, mussel, squid, anchovy", apiKey: "" },
+    settingsTs: 0,
+    sync: { mode: "off", token: "", gistId: "", lastSync: 0 },
+    weekStart: todayISO()
+  };
+}
+if (!db) { db = freshDb(); Store.save(db); }
+db.settings = db.settings || {};
+db.planTs = db.planTs || {};
+db.deleted = db.deleted || {};
+db.sync = db.sync || { mode: "off", token: "", gistId: "", lastSync: 0 };
+
+// A key pasted into the wrong field before the guard existed is still on
+// this device. Clear it on sight and say so — a stored credential in the
+// wrong place is worse than a broken sync setting.
+let purgedToken = false;
+if (db.sync.token && /^sk-ant-/i.test(db.sync.token.trim())){
+  db.sync.token = "";
+  db.sync.mode = "off";
+  purgedToken = true;
+  Store.save(db);
+}
+if (!db.weekStart) db.weekStart = todayISO();
+// Older recipes predate change tracking; treat them as last touched when added.
+db.recipes.forEach(r => { if (!r.updated) r.updated = r.added || 1; });
+
+const save = () => { const r = Store.save(db); schedulePush(); return r; };
+const touch = r => { r.updated = Date.now(); return r; };
+
+/* ============================================================
+   SYNC
+
+   Two devices both editing offline is the whole problem. Rather than
+   letting one copy overwrite the other, every recipe carries the time it
+   was last changed and deletions leave a marker behind, so a merge can
+   tell "this was edited" from "this was never here".
+   ============================================================ */
+const SYNC_FILE = "mise-sync.json";
+
+function mergeDb(local, remote){
+  const out = JSON.parse(JSON.stringify(local));
+  const stats = { added: 0, updated: 0, removed: 0 };
+  if (!remote || !Array.isArray(remote.recipes)) return { db: out, stats };
+
+  const stamp = r => r.updated || r.added || 0;
+
+  // Deletions from either side, keeping the later marker.
+  out.deleted = out.deleted || {};
+  for (const id in (remote.deleted || {})){
+    out.deleted[id] = Math.max(out.deleted[id] || 0, remote.deleted[id]);
+  }
+
+  const byId = {};
+  out.recipes.forEach(r => { byId[r.id] = r; });
+  remote.recipes.forEach(r => {
+    const mine = byId[r.id];
+    if (!mine){ byId[r.id] = r; stats.added++; }
+    else if (stamp(r) > stamp(mine)){
+      // A remote copy sent without photos must not delete the one here.
+      if (!r.image && mine.image) r.image = mine.image;
+      byId[r.id] = r; stats.updated++;
+    }
+  });
+
+  // A deletion only wins if it happened after the last edit.
+  out.recipes = Object.values(byId).filter(r => {
+    const gone = out.deleted[r.id];
+    if (gone && gone > stamp(r)){ stats.removed++; return false; }
+    return true;
+  });
+
+  // Plan: per day and slot, most recently set wins.
+  out.plan = out.plan || {}; out.planTs = out.planTs || {};
+  const rPlan = remote.plan || {}, rTs = remote.planTs || {};
+  for (const day in rPlan){
+    for (const slot in rPlan[day]){
+      const key = day + "|" + slot;
+      if ((rTs[key] || 0) > (out.planTs[key] || 0)){
+        out.plan[day] = out.plan[day] || {};
+        out.plan[day][slot] = rPlan[day][slot];
+        out.planTs[key] = rTs[key] || 0;
+      }
+    }
+  }
+  // Drop plan entries whose recipe no longer exists anywhere.
+  const live = new Set(out.recipes.map(r => r.id));
+  for (const day in out.plan){
+    for (const slot in out.plan[day]){
+      if (!live.has(out.plan[day][slot].id)) delete out.plan[day][slot];
+    }
+  }
+
+  // Leftovers: union, matched on the ingredient rather than the wording,
+  // so "half a cabbage" and "cabbage" don't both end up in the fridge.
+  const leftKey = l => {
+    const p = parseIngredient(l.name || l.raw || "");
+    return ingKey((p && p.name) || l.name || "");
+  };
+  const seen = new Set(out.leftovers.map(leftKey));
+  (remote.leftovers || []).forEach(l => {
+    const k = leftKey(l);
+    if (k && !seen.has(k)){ out.leftovers.push(l); seen.add(k); }
+  });
+
+  out.ticked = Object.assign({}, remote.ticked || {}, out.ticked || {});
+
+  // Settings move as a block, newest wins — but never wipe a key that
+  // only exists on this device.
+  if ((remote.settingsTs || 0) > (out.settingsTs || 0)){
+    const keepKey = out.settings.apiKey;
+    out.settings = Object.assign({}, remote.settings);
+    out.settingsTs = remote.settingsTs;
+    if (!out.settings.apiKey) out.settings.apiKey = keepKey;
+  }
+
+  return { db: out, stats };
+}
+
+function syncPayload(){
+  // The API key and sync token stay on the device that owns them.
+  const copy = JSON.parse(JSON.stringify(db));
+  delete copy.sync;
+  if (copy.settings) copy.settings.apiKey = "";
+
+  // Photos taken on the phone are by far the biggest thing here. If the
+  // whole shelf won't fit, send the recipes without them rather than let
+  // the sync fail outright.
+  if (JSON.stringify(copy).length > 900000){
+    copy.recipes.forEach(r => { if (r.image && r.image.startsWith("data:")) r.image = ""; });
+    copy.photosStripped = true;
+  }
+  return copy;
+}
+
+async function gistCall(path, opts){
+  const token = db.sync.token;
+  if (!token) throw new Error("No token saved");
+  const res = await fetch("https://api.github.com" + path, Object.assign({
+    headers: {
+      "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json",
+      "Content-Type": "application/json"
+    }
+  }, opts));
+  if (res.status === 401) throw new Error("GitHub rejected that token");
+  if (res.status === 404) throw new Error("That sync store no longer exists");
+  if (!res.ok) throw new Error("GitHub returned " + res.status);
+  return res.json();
+}
+
+async function gistCreate(){
+  const j = await gistCall("/gists", {
+    method: "POST",
+    body: JSON.stringify({
+      description: "Mise recipe sync — do not edit by hand",
+      public: false,
+      files: { [SYNC_FILE]: { content: JSON.stringify(syncPayload()) } }
+    })
+  });
+  db.sync.gistId = j.id;
+  return j.id;
+}
+
+async function gistRead(){
+  const j = await gistCall("/gists/" + db.sync.gistId, { method: "GET" });
+  const f = j.files && j.files[SYNC_FILE];
+  if (!f) throw new Error("Nothing stored there yet");
+  if (f.truncated && f.raw_url){
+    const r = await fetch(f.raw_url);
+    return JSON.parse(await r.text());
+  }
+  return JSON.parse(f.content);
+}
+
+async function gistWrite(){
+  await gistCall("/gists/" + db.sync.gistId, {
+    method: "PATCH",
+    body: JSON.stringify({ files: { [SYNC_FILE]: { content: JSON.stringify(syncPayload()) } } })
+  });
+}
+
+let pushTimer = null, syncing = false;
+function schedulePush(){
+  if (db.sync.mode !== "gist" || !db.sync.gistId || syncing) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { syncNow(true); }, 4000);
+}
+
+async function syncNow(quiet){
+  if (db.sync.mode !== "gist" || !db.sync.gistId) return;
+  if (syncing) return;
+  syncing = true;
+  clearTimeout(pushTimer);
+  try {
+    if (!quiet) toast("Syncing…");
+    const remote = await gistRead().catch(() => null);
+    if (remote){
+      const { db: merged, stats } = mergeDb(db, remote);
+      const sync = db.sync;
+      db = merged; db.sync = sync;
+      if (!quiet && (stats.added || stats.updated || stats.removed)){
+        toast("Merged: " + stats.added + " new, " + stats.updated + " updated");
+      }
+    }
+    await gistWrite();
+    db.sync.lastSync = Date.now();
+    Store.save(db);
+    if (!quiet) toast("Synced");
+    if (current === "shelf" || current === "home") renderRecipes();
+    if (current === "plan") renderPlan();
+    if (current === "set") renderSettings();
+  } catch(err){
+    if (!quiet) toast("Sync failed: " + err.message);
+  } finally { syncing = false; }
+}
+
+/* ============================================================
+   AVOID FILTER
+   ============================================================ */
+function avoidWords(){
+  return (db.settings.avoid || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+}
+function isAvoided(r){
+  const words = avoidWords();
+  if (!words.length) return false;
+  const hay = (r.title + " " + r.tags.join(" ") + " " + r.ing.map(i => i.name).join(" ")).toLowerCase();
+  return words.some(w => hay.includes(w));
+}
+const visibleRecipes = () => db.recipes.filter(r => !isAvoided(r));
+
+
+function stepNeeds(r, text){
+  const low = text.toLowerCase();
+  return r.ing.filter(i => {
+    const k = ingKey(i.name);
+    if (!k) return false;
+    return k.split(" ").some(w => w.length > 3 && low.includes(w));
+  }).slice(0,5);
+}
+function stepSeconds(text){
+  const m = text.match(/(\d+)\s*(second|sec|minute|min|hour|hr)/i);
+  if (!m) return 0;
+  const n = parseInt(m[1]), u = m[2].toLowerCase();
+  if (u.startsWith("s")) return n;
+  if (u.startsWith("h")) return n*3600;
+  return n*60;
+}
+
+
+function buildList(){
+  const bag = {};
+  weekDays().forEach(d => {
+    const day = db.plan[d] || {};
+    ["lunch","dinner"].forEach(sl => {
+      const entry = day[sl]; if (!entry) return;
+      const r = db.recipes.find(x => x.id === entry.id); if (!r) return;
+      const k = entry.serves / r.serves;
+      r.ing.forEach(i => {
+        const key = ingKey(i.name) + "|" + (i.unit || "");
+        if (!key.startsWith("|")){
+          if (!bag[key]) bag[key] = { name: i.name, unit: i.unit, qty: 0, hasQty: false, from: new Set() };
+          if (i.qty !== null && i.qty !== undefined){ bag[key].qty += i.qty * k; bag[key].hasQty = true; }
+          bag[key].from.add(r.title);
+        }
+      });
+    });
+  });
+  return Object.entries(bag).map(([key,v]) => ({ key, ...v, aisle: aisleOf(v.name, v.unit) }));
+}
+
+
+function addLeftover(text){
+  const t = text.trim(); if (!t) return;
+  const p = parseIngredient(t) || { name: t, qty: null, unit: "" };
+  const key = ingKey(p.name);
+  if (!key) return;
+  if (db.leftovers.some(l => ingKey(l.name) === key)) { toast("Already in the fridge"); return; }
+  db.leftovers.push({ id: uid(), name: p.name, qty: p.qty, unit: p.unit, raw: t, added: Date.now() });
+  save();
+}
+
+
+
+/* ============================================================
+   UI PLUMBING
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+let toastT;
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2600);
+}
+
+function openSheet(title, html){
+  $("#sheetPanel").innerHTML = "<h3>" + esc(title) + "</h3>" + html;
+  $("#sheet").classList.add("on");
+}
+function closeSheet(){ $("#sheet").classList.remove("on"); }
+$("#sheet .scrim").addEventListener("click", closeSheet);
+
+/* Recipes imported from links usually carry a photo. Typed ones don't, so
+   they get a colour drawn from their own name — stable, and never the same
+   two next to each other by accident. */
+const PICS = [["#D98E4A","#8E4B22"],["#CDA94E","#8A6B25"],["#9FB86B","#4F6B35"],
+              ["#D06A4E","#8C3320"],["#E0B978","#A87A3C"],["#88A9B5","#4A6B78"]];
+function hashOf(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h*31 + s.charCodeAt(i))|0; return Math.abs(h); }
+function picStyle(r){
+  if (r && r.image) return 'background-image:url(' + esc(r.image) + ')';
+  const p = PICS[hashOf((r && (r.id || r.title)) || "x") % PICS.length];
+  return 'background:linear-gradient(140deg,' + p[0] + ',' + p[1] + ')';
+}
+const mins = n => n >= 60 ? (Math.floor(n/60) + " hr" + (n%60 ? " " + (n%60) : "")) : (n + " min");
+
+const TITLES = { home:"Tonight", shelf:"Your shelf", detail:"", plan:"This week",
+                 shop:"Shopping", fridge:"Fridge", add:"Add", set:"Settings" };
+
+let current = "home";
+function go(name){
+  current = name;
+  $$(".screen").forEach(s => s.classList.remove("on"));
+  const el = $("#s-" + name);
+  if (el) el.classList.add("on");
+  $$("#nav button").forEach(b => b.classList.toggle("on", b.dataset.s === name));
+  $("#pageTitle").textContent = TITLES[name] || "";
+  $("#pageTitle").style.display = name === "detail" ? "none" : "";
+  $("#fab").style.display = ["home","shelf","plan","fridge"].includes(name) ? "flex" : "none";
+  $("#syncBtn").style.display = (name === "set" || db.sync.mode !== "gist" || !db.sync.gistId) ? "none" : "flex";
+  window.scrollTo(0,0);
+  if (name === "home") renderHome();
+  if (name === "shelf") renderShelf();
+  if (name === "plan") renderPlan();
+  if (name === "shop") renderShop();
+  if (name === "fridge") renderFridge();
+  if (name === "set") renderSettings();
+}
+$("#nav").addEventListener("click", e => { const b = e.target.closest("button"); if (b) go(b.dataset.s); });
+$("#avBtn").onclick = () => go("set");
+$("#fab").onclick = () => go("add");
+$("#syncBtn").onclick = () => syncNow(false);
+
+/* renderRecipes is what the sync code calls after a merge. */
+function renderRecipes(){ if (current === "shelf") renderShelf(); if (current === "home") renderHome(); }
+
+/* ============================================================
+   HOME — what am I cooking, and what needs using up
+   ============================================================ */
+function leftoverMatches(){
+  const keys = db.leftovers.map(l => ({ raw: l.raw || l.name, k: ingKey(l.name) })).filter(x => x.k);
+  if (!keys.length) return [];
+  return visibleRecipes().map(r => {
+    const hits = [];
+    keys.forEach(({raw,k}) => {
+      const words = k.split(" ").filter(w => w.length > 2);
+      if (r.ing.some(i => { const ik = ingKey(i.name); return words.some(w => ik.includes(w)); })) hits.push(raw);
+    });
+    return { r, hits };
+  }).filter(x => x.hits.length)
+    .sort((a,b) => b.hits.length - a.hits.length || (b.r.fav?1:0)-(a.r.fav?1:0) || a.r.mins - b.r.mins);
+}
+
+function todaysMeals(){
+  const day = db.plan[todayISO()] || {};
+  return ["lunch","dinner"].map(slot => {
+    const e = day[slot];
+    if (!e) return null;
+    const r = db.recipes.find(x => x.id === e.id);
+    return r ? { slot, r, serves: e.serves } : null;
+  }).filter(Boolean);
+}
+
+function renderHome(){
+  const all = visibleRecipes();
+  const meals = todaysMeals();
+  const matches = leftoverMatches();
+  const favs = all.filter(r => r.fav).sort((a,b) => b.updated - a.updated);
+  const recent = all.slice().sort((a,b) => b.added - a.added).slice(0,8);
+  let h = "";
+
+  /* Fridge first: the app's reason for existing. */
+  h += '<div class="panel tight"><div class="ph"><h2>Use up your fridge</h2>' +
+       '<button class="act go" data-go="fridge">' + (db.leftovers.length ? "Manage" : "Add") + '</button></div>';
+  if (db.leftovers.length){
+    h += '<div class="psub">' + db.leftovers.length + " thing" + (db.leftovers.length===1?"":"s") + " to cook before " + (db.leftovers.length===1?"it turns":"they turn") + '</div>' +
+         '<div class="hscroll">' + db.leftovers.map(l =>
+           '<button class="chip on" data-go="fridge">' + esc(l.raw || l.name) + '</button>').join("") + '</div>';
+  } else {
+    h += '<div class="psub">Nothing logged. Add the half cabbage and Mise finds what to do with it.</div>' +
+         '<div style="padding:0 18px"><button class="btn line full" data-go="fridge">Add a leftover</button></div>';
+  }
+  h += '</div>';
+
+  if (meals.length){
+    h += '<div class="panel tight"><div class="ph"><h2>Cooking today</h2>' +
+         '<button class="act" data-go="plan">Change</button></div>';
+    meals.forEach(m => {
+      h += '<button class="tonight" data-open="' + m.r.id + '" style="margin-bottom:12px">' +
+           '<span class="pic" style="' + picStyle(m.r) + '"></span>' +
+           '<span><span style="display:block;font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">' + m.slot + '</span>' +
+           '<h3 style="margin-top:4px">' + esc(m.r.title) + '</h3>' +
+           '<span class="t">' + mins(m.r.mins) + ' · serves ' + m.serves + '</span></span></button>';
+    });
+    h += '<div style="padding:0 18px"><button class="btn full" data-cook="' + meals[meals.length-1].r.id + '">Start cooking</button></div></div>';
+  } else {
+    h += '<div class="panel tight"><div class="ph"><h2>Cooking today</h2>' +
+         '<button class="act" data-go="plan">Plan</button></div>' +
+         '<div class="empty"><strong>Nothing planned</strong>Put something on today and it shows up here.</div></div>';
+  }
+
+  if (matches.length){
+    const what = matches[0].hits[0];
+    h += '<div class="panel tight"><div class="ph"><h2>Uses your ' + esc(String(what).replace(/^\d+\s*/,"").slice(0,18)) + '</h2>' +
+         '<button class="act" data-go="fridge">See all</button></div><div class="hscroll">' +
+         matches.slice(0,6).map(m =>
+           '<button class="big" data-open="' + m.r.id + '" style="' + picStyle(m.r) + '">' +
+           '<span class="tag">' + mins(m.r.mins) + '</span>' +
+           '<span class="mark' + (m.r.fav?" on":"") + '">' + (m.r.fav?"★":"☆") + '</span>' +
+           '<h3>' + esc(m.r.title) + '</h3>' +
+           '<span class="meta">Uses ' + m.hits.length + ' of your leftovers</span></button>').join("") +
+         '</div></div>';
+  }
+
+  if (favs.length){
+    h += '<div class="panel"><div class="ph"><h2>Your favourites</h2>' +
+         '<button class="act" data-go="shelf">See all</button></div><div class="hscroll">' +
+         favs.slice(0,8).map(r =>
+           '<button class="small" data-open="' + r.id + '"><span class="pic" style="' + picStyle(r) + '"></span>' +
+           '<h4>' + esc(r.title) + '</h4><span class="t">' + mins(r.mins) + '</span></button>').join("") +
+         '</div></div>';
+  }
+
+  h += '<div class="panel"><div class="ph"><h2>Recently added</h2>' +
+       '<button class="act" data-go="shelf">All ' + all.length + '</button></div><div class="hscroll">' +
+       recent.map(r =>
+         '<button class="small" data-open="' + r.id + '"><span class="pic" style="' + picStyle(r) + '"></span>' +
+         '<h4>' + esc(r.title) + '</h4><span class="t">' + mins(r.mins) + '</span></button>').join("") +
+       '</div></div>';
+
+  $("#s-home").innerHTML = h;
+}
+
+/* ============================================================
+   SHELF
+   ============================================================ */
+let rFilter = "all", rSearch = "";
+
+function renderShelf(){
+  const all = visibleRecipes();
+  const tags = [...new Set(all.flatMap(r => r.tags))].sort().slice(0,8);
+  const q = rSearch.trim().toLowerCase();
+
+  const list = all.filter(r => {
+    if (rFilter === "fav" && !r.fav) return false;
+    if (rFilter !== "all" && rFilter !== "fav" && !r.tags.includes(rFilter)) return false;
+    if (!q) return true;
+    return (r.title + " " + r.ing.map(i => i.name).join(" ") + " " + r.tags.join(" ")).toLowerCase().includes(q);
+  }).sort((a,b) => (b.fav?1:0)-(a.fav?1:0) || b.added - a.added);
+
+  const hidden = db.recipes.length - all.length;
+  let h = '<div class="panel tight">' +
+    '<div class="ph"><h2>' + all.length + ' recipe' + (all.length===1?"":"s") + '</h2>' +
+    (hidden ? '<span class="act">' + hidden + ' hidden</span>' : '') + '</div>' +
+    '<div class="search"><input type="text" id="search" placeholder="Search recipes or ingredients" value="' + esc(rSearch) + '"></div>' +
+    '<div class="hscroll" id="shelfChips">' +
+      '<button class="chip' + (rFilter==="all"?" on":"") + '" data-f="all">All</button>' +
+      '<button class="chip' + (rFilter==="fav"?" on":"") + '" data-f="fav">★ Favourites</button>' +
+      tags.map(t => '<button class="chip' + (rFilter===t?" on":"") + '" data-f="' + esc(t) + '">' + esc(t) + '</button>').join("") +
+    '</div></div>';
+
+  h += '<div class="panel">';
+  if (!list.length){
+    h += '<div class="empty"><strong>Nothing here</strong>' +
+      (q || rFilter !== "all" ? "Try a different search or filter." : "Tap the plus to add your first recipe.") + '</div>';
+  } else {
+    h += '<div class="grid">' + list.map(r =>
+      '<button class="gcard" data-open="' + r.id + '">' +
+        '<span class="pic" style="' + picStyle(r) + '">' +
+          '<span class="mark' + (r.fav?" on":"") + '" data-fav="' + r.id + '">' + (r.fav?"★":"☆") + '</span>' +
+        '</span>' +
+        '<span class="body"><h4>' + esc(r.title) + '</h4>' +
+        '<span class="t">' + mins(r.mins) + ' · serves ' + r.serves + '</span></span>' +
+      '</button>').join("") + '</div>';
+  }
+  h += '</div>';
+
+  $("#s-shelf").innerHTML = h;
+  $("#search").addEventListener("input", e => {
+    rSearch = e.target.value;
+    const pos = e.target.selectionStart;
+    renderShelf();
+    const box = $("#search"); box.focus(); box.setSelectionRange(pos,pos);
+  });
+}
+
+/* ---- nutrition display ----
+   Reference intakes are the UK/EU adult values printed on packaging.
+   The colour bands are the UK front-of-pack criteria, applied per
+   portion. No invented score, and no glycemic figures — those come from
+   measuring real foods in a lab, not from a list of ingredients. */
+const RI = { kcal:2000, fat:70, sat:20, carbs:260, sugars:90, protein:50, salt:6, fibre:30 };
+
+function saltGrams(n){ return n.sodiumMg === null || n.sodiumMg === undefined ? null : n.sodiumMg * 2.5 / 1000; }
+
+function band(kind, v){
+  if (v === null || v === undefined) return null;
+  const t = { fat:[3,21], sat:[1.5,6], sugars:[5,27], salt:[.3,1.8] }[kind];
+  if (!t) return null;
+  return v <= t[0] ? "low" : (v > t[1] ? "high" : "med");
+}
+const BANDNAME = { low:"Low", med:"Medium", high:"High" };
+const BANDCOL = { low:"#2F8B5B", med:"#C88A12", high:"#C4402B" };
+
+function pct(v, ref){ return v === null || v === undefined ? null : Math.round(v / ref * 100); }
+
+function nutritionHtml(r){
+  const n = r.nutrition;
+  if (!n){
+    return '<div class="panel tight"><div class="empty"><strong>No nutrition for this one</strong>' +
+      'Mise only shows figures a recipe site actually published. This one didn\'t, and guessing them from a list of ingredients would give you numbers that look precise and aren\'t.</div>' +
+      (db.settings.apiKey
+        ? '<div style="padding:0 18px"><button class="btn line full" id="nEstimate">Estimate it with your API key</button>' +
+          '<p class="help" style="margin-top:10px">An estimate from the ingredients. Useful for a rough sense of a dish, not for counting.</p></div>'
+        : '<div style="padding:0 18px"><p class="help">Recipes imported from most sites bring their own figures. Add an Anthropic key in Settings and Mise can also estimate them from the ingredients, clearly marked as an estimate.</p></div>') +
+      '</div>';
+  }
+
+  const salt = saltGrams(n);
+  const lights = [["fat","Fat",n.fat],["sat","Saturates",n.sat],["sugars","Sugars",n.sugars],["salt","Salt",salt]]
+    .filter(([k,l,v]) => v !== null && v !== undefined);
+
+  const rows = [
+    ["Energy", n.kcal, "kcal", RI.kcal],
+    ["Fat", n.fat, "g", RI.fat],
+    ["of which saturates", n.sat, "g", RI.sat],
+    ["Carbohydrate", n.carbs, "g", RI.carbs],
+    ["of which sugars", n.sugars, "g", RI.sugars],
+    ["Fibre", n.fibre, "g", RI.fibre],
+    ["Protein", n.protein, "g", RI.protein],
+    ["Salt", salt, "g", RI.salt]
+  ].filter(x => x[1] !== null && x[1] !== undefined);
+
+  let h = "";
+
+  if (lights.length){
+    h += '<div class="panel tight"><div class="ph"><h2>Per serving</h2>' +
+      '<span class="act">' + (n.source === "estimate" ? "Estimated" : "From the site") + '</span></div>' +
+      '<div class="lights">' + lights.map(([k,label,v]) => {
+        const b = band(k,v);
+        return '<div class="light"><span class="dot" style="background:' + BANDCOL[b] + '"></span>' +
+          '<span class="lv">' + fmtNum(Math.round(v*10)/10) + 'g</span>' +
+          '<span class="ll">' + label + '</span>' +
+          '<span class="lb" style="color:' + BANDCOL[b] + '">' + BANDNAME[b] + '</span></div>';
+      }).join("") + '</div>' +
+      '<p class="help" style="padding:12px 18px 0">Colour bands follow the UK front-of-pack guidance for a portion.</p></div>';
+  }
+
+  h += '<div class="panel tight"><div class="ph"><h2>Nutrition per serving</h2></div>' +
+    rows.map(([label,v,unit,ref]) => {
+      const p = pct(v, ref);
+      const indent = label.startsWith("of which");
+      return '<div class="nrow' + (indent?" sub":"") + '"><span class="nl">' + label + '</span>' +
+        '<span class="nv">' + fmtNum(Math.round(v*100)/100) + unit + '</span>' +
+        '<span class="np">' + (p === null ? "" : p + "%") + '</span></div>';
+    }).join("") +
+    '<p class="help" style="padding:12px 18px 0">Percentages are of an adult reference intake — 2,000 kcal a day. ' +
+    (n.serving ? 'The site gives a serving as ' + esc(n.serving) + '. ' : "") +
+    'These are the recipe\'s own figures at its original serving count, so they don\'t change when you scale the ingredients.</p></div>';
+
+  if (n.source === "estimate"){
+    h += '<div class="panel pad"><p class="help">These figures were estimated from the ingredient list, not measured. Treat them as a rough guide. If you\'re managing a health condition, use figures from the products you actually cook with.</p></div>';
+  }
+
+  return h;
+}
+
+/* Delegated once, rather than re-bound on every render. */
+$("#s-shelf").addEventListener("click", e => {
+  const b = e.target.closest("[data-f]");
+  if (!b) return;
+  rFilter = b.dataset.f;
+  renderShelf();
+});
+
+/* ============================================================
+   DETAIL
+   ============================================================ */
+let detailId = null, detailServes = 0, detailFrom = "shelf", detailTab = "ing";
+
+function openRecipe(id){
+  const r = db.recipes.find(x => x.id === id);
+  if (!r) return;
+  detailId = id; detailServes = r.serves; detailTab = "ing";
+  if (current !== "detail") detailFrom = current;
+  go("detail"); renderDetail();
+}
+
+function renderDetail(){
+  const r = db.recipes.find(x => x.id === detailId);
+  if (!r) return go(detailFrom);
+  const k = detailServes / r.serves;
+
+  let body = "";
+  if (detailTab === "ing"){
+    body = '<div class="panel tight">' +
+      '<div class="scaler"><button id="dMinus" aria-label="Fewer servings">−</button>' +
+      '<span class="val">SERVES ' + detailServes + '</span>' +
+      '<button id="dPlus" aria-label="More servings">+</button></div>' +
+      r.ing.map(i => '<div class="ing"><span class="q">' +
+        esc(i.qty !== null && i.qty !== undefined ? fmtNum(i.qty*k) + (i.unit ? " " + i.unit : "") : "—") +
+        '</span><span>' + esc(i.name) + (i.note ? ', <span style="color:var(--muted)">' + esc(i.note) + '</span>' : "") + '</span></div>').join("") +
+      '</div>';
+  } else if (detailTab === "method"){
+    body = '<div class="panel tight">' +
+      r.steps.map((s,n) => '<div class="stp"><span class="n">' + String(n+1).padStart(2,"0") + '</span><span>' + esc(s) + '</span></div>').join("") +
+      '</div>';
+  } else {
+    body = nutritionHtml(r);
+  }
+
+  $("#s-detail").innerHTML =
+    '<div class="hero" style="' + picStyle(r) + '">' +
+      '<button class="back" id="dBack">‹</button>' +
+      '<span class="mark' + (r.fav?" on":"") + '" id="dFav" style="top:14px;right:14px;width:34px;height:34px">' + (r.fav?"★":"☆") + '</span>' +
+      '<h2>' + esc(r.title) + '</h2>' +
+      (r.source ? '<span class="src">' + esc(r.source.slice(0,40)) + '</span>' : '') +
+    '</div>' +
+    '<div class="strip">' +
+      '<div><b>' + mins(r.mins) + '</b><span>Time</span></div>' +
+      '<div><b>' + detailServes + '</b><span>Serves</span></div>' +
+      '<div><b>' + r.ing.length + '</b><span>Items</span></div>' +
+    '</div>' +
+    '<div class="rtabs" id="rTabs">' +
+      '<button data-rt="ing" class="' + (detailTab==="ing"?"on":"") + '">Ingredients</button>' +
+      '<button data-rt="method" class="' + (detailTab==="method"?"on":"") + '">Method</button>' +
+      '<button data-rt="nutri" class="' + (detailTab==="nutri"?"on":"") + '">Nutrition</button>' +
+    '</div>' +
+    body +
+    '<div class="panel pad">' +
+      '<button class="btn full" id="dCook">Start cooking</button>' +
+      '<div class="row" style="margin-top:10px"><button class="btn line" id="dPlan" style="flex:1">Add to plan</button>' +
+      '<button class="btn line" id="dLeft" style="flex:1">Log leftovers</button></div>' +
+      '<div class="row" style="margin-top:10px">' +
+        '<button class="btn line" id="dPhoto" style="flex:1">' + (r.image ? "Replace photo" : "Add a photo") + '</button>' +
+        (r.image ? '<button class="btn line" id="dNoPhoto" style="flex:1">Remove photo</button>' : '') +
+      '</div>' +
+      '<input type="file" id="dPhotoIn" accept="image/*" style="display:none">' +
+      '<button class="btn line full" id="dEdit" style="margin-top:10px">Edit recipe</button>' +
+      '<button class="btn danger full" id="dDel" style="margin-top:10px">Remove recipe</button>' +
+    '</div>';
+
+  $("#rTabs").addEventListener("click", e => {
+    const b = e.target.closest("[data-rt]"); if (!b) return;
+    detailTab = b.dataset.rt; renderDetail();
+  });
+
+  if (detailTab === "ing"){
+    $("#dMinus").onclick = () => { detailServes = Math.max(1, detailServes-1); renderDetail(); };
+    $("#dPlus").onclick = () => { detailServes = Math.min(24, detailServes+1); renderDetail(); };
+  }
+  const est = $("#nEstimate");
+  if (est) est.onclick = () => estimateNutrition(r);
+
+  $("#dBack").onclick = () => go(detailFrom);
+  $("#dCook").onclick = () => startCook(r.id);
+  $("#dFav").onclick = () => { r.fav = !r.fav; touch(r); save(); renderDetail(); toast(r.fav ? "Favourited" : "Removed from favourites"); };
+  $("#dPlan").onclick = () => pickDay(r.id);
+  $("#dLeft").onclick = () => logLeftovers(r);
+  $("#dEdit").onclick = () => editRecipe(r);
+  $("#dPhoto").onclick = () => $("#dPhotoIn").click();
+  $("#dPhotoIn").addEventListener("change", e => {
+    const f = e.target.files[0]; e.target.value = "";
+    if (f) attachPhoto(r, f);
+  });
+  const noPhoto = $("#dNoPhoto");
+  if (noPhoto) noPhoto.onclick = () => {
+    r.image = ""; touch(r); save(); renderDetail(); toast("Photo removed");
+  };
+  $("#dDel").onclick = () => {
+    openSheet("Remove " + r.title + "?",
+      '<p class="muted" style="margin-top:-6px">It goes from the shelf and from any day it is planned for.</p>' +
+      '<button class="btn danger full" id="confirmDel" style="margin-top:16px">Yes, remove it</button>' +
+      '<button class="btn line full" id="cancelDel" style="margin-top:10px">Keep it</button>');
+    $("#cancelDel").onclick = closeSheet;
+    $("#confirmDel").onclick = () => {
+      db.recipes = db.recipes.filter(x => x.id !== r.id);
+      db.deleted[r.id] = Date.now();
+      Object.keys(db.plan).forEach(d => ["lunch","dinner"].forEach(sl => {
+        if (db.plan[d] && db.plan[d][sl] && db.plan[d][sl].id === r.id){
+          delete db.plan[d][sl]; db.planTs[d + "|" + sl] = Date.now();
+        }
+      }));
+      save(); closeSheet(); go("shelf"); toast("Removed");
+    };
+  };
+}
+
+function editRecipe(r){
+  editingId = r.id;
+  go("add");
+  showDraft({
+    title: r.title, serves: r.serves, mins: r.mins, tags: r.tags,
+    ing: r.ing, steps: r.steps, image: r.image, source: r.source, url: r.url
+  });
+  $("#saveRecipe").textContent = "Save changes";
+  toast("Editing " + r.title);
+}
+
+/* ---- recipe photos ----
+   Stored on the device as data, not a link, so they survive going offline.
+   Browser storage is about 5MB in total, so these are shrunk hard: a
+   640px long edge is more than the largest card ever needs. */
+function fitCanvas(img, maxDim){
+  const long = Math.max(img.width, img.height);
+  const scale = long > maxDim ? maxDim / long : 1;
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+function storageUsed(){
+  try { return JSON.stringify(db).length; } catch(e){ return 0; }
+}
+const asKB = n => n > 900000 ? (n/1048576).toFixed(1) + " MB" : Math.round(n/1024) + " KB";
+
+async function attachPhoto(r, file){
+  if (!file) return;
+  toast("Adding the photo…");
+  try {
+    const img = await loadImage(file);
+    const url = fitCanvas(img, 640).toDataURL("image/jpeg", 0.65);
+    const before = r.image;
+    r.image = url;
+    touch(r);
+    if (!Store.save(db)){
+      r.image = before;
+      Store.save(db);
+      return toast("No room left on this device — remove a photo or two first");
+    }
+    schedulePush();
+    renderDetail();
+    toast("Photo added · " + asKB(url.length));
+  } catch(err){
+    toast("Could not use that image: " + err.message);
+  }
+}
+
+async function estimateNutrition(r){
+  if (!db.settings.apiKey) return toast("No API key saved");
+  toast("Estimating…");
+  const list = r.ing.map(i => (i.qty !== null && i.qty !== undefined ? fmtNum(i.qty) + (i.unit?" "+i.unit:"") + " " : "") + i.name).join("\n");
+  const prompt = `Estimate the nutrition for ONE serving of this recipe, which serves ${r.serves}.
+Reply with JSON only, no prose or fences:
+{"kcal":number,"fat":number,"sat":number,"carbs":number,"sugars":number,"protein":number,"sodiumMg":number,"fibre":number}
+Grams for everything except kcal and sodiumMg. If you cannot estimate a field, use null.
+
+${r.title}
+${list}`;
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":db.settings.apiKey,
+               "anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body: JSON.stringify({ model:"claude-sonnet-4-6", max_tokens:600, messages:[{role:"user",content:prompt}] })
+    });
+    if (!res.ok) throw new Error("The API refused that (" + res.status + ")");
+    const data = await res.json();
+    const txt = (data.content||[]).filter(c => c.type === "text").map(c => c.text).join("").replace(/```json|```/g,"").trim();
+    const j = JSON.parse(txt);
+    r.nutrition = {
+      kcal:j.kcal ?? null, fat:j.fat ?? null, sat:j.sat ?? null, carbs:j.carbs ?? null,
+      sugars:j.sugars ?? null, protein:j.protein ?? null, sodiumMg:j.sodiumMg ?? null,
+      fibre:j.fibre ?? null, serving:"", source:"estimate"
+    };
+    touch(r); save(); renderDetail(); toast("Estimated — treat it as a guide");
+  } catch(err){ toast("Could not estimate: " + err.message); }
+}
+
+/* Card taps, shared across every screen that shows a recipe. */
+document.addEventListener("click", e => {
+  const fav = e.target.closest("[data-fav]");
+  if (fav){
+    e.stopPropagation();
+    const r = db.recipes.find(x => x.id === fav.dataset.fav);
+    if (r){ r.fav = !r.fav; touch(r); save(); toast(r.fav ? "Favourited" : "Removed from favourites");
+      if (current === "shelf") renderShelf(); else if (current === "home") renderHome(); }
+    return;
+  }
+  const open = e.target.closest("[data-open]");
+  if (open) return openRecipe(open.dataset.open);
+  const nav = e.target.closest("[data-go]");
+  if (nav) return go(nav.dataset.go);
+  const ck = e.target.closest("[data-cook]");
+  if (ck) return startCook(ck.dataset.cook);
+});
+
+/* ============================================================
+   COOK MODE
+   ============================================================ */
+let cookR = null, cookI = 0, wakeLock = null, tHandle = null, tEnd = 0;
+
+async function startCook(id){
+  cookR = db.recipes.find(x => x.id === id); if (!cookR || !cookR.steps.length) return toast("No steps to follow");
+  cookI = 0;
+  $("#cook").classList.add("on");
+  $("#cookName").textContent = cookR.title;
+  renderCook();
+  try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch(e){}
+}
+function stopCook(){
+  $("#cook").classList.remove("on");
+  clearInterval(tHandle); tHandle = null;
+  if (wakeLock){ try { wakeLock.release(); } catch(e){} wakeLock = null; }
+}
+function renderCook(){
+  const total = cookR.steps.length;
+  const text = cookR.steps[cookI];
+  const needs = stepNeeds(cookR, text);
+  const secs = stepSeconds(text);
+
+  $("#cookPips").innerHTML = cookR.steps.map((_,i) => '<i class="' + (i <= cookI ? "on" : "") + '"></i>').join("");
+  $("#cookCard").innerHTML =
+    '<div class="n">Step ' + (cookI+1) + ' of ' + total + '</div>' +
+    '<div class="txt">' + esc(text) + '</div>' +
+    (needs.length ? '<div class="need"><span>To hand</span>' + needs.map(i =>
+      '<p>' + esc((i.qty!==null&&i.qty!==undefined ? fmtNum(i.qty) + (i.unit?" "+i.unit:"") + " " : "") + i.name) + '</p>').join("") + '</div>' : "");
+  $("#cookTimerWrap").innerHTML = secs
+    ? '<button class="timerbtn" id="tBtn">▷ Start ' + (secs >= 60 ? Math.round(secs/60) + " min" : secs + " sec") + ' timer</button>' : "";
+  if (secs) $("#tBtn").onclick = () => runTimer(secs);
+
+  $("#cookPrev").disabled = cookI === 0;
+  $("#cookNext").textContent = cookI === total-1 ? "Done" : "Next";
+  clearInterval(tHandle); tHandle = null;
+  $("#cookCard").scrollTop = 0;
+}
+function runTimer(secs){
+  tEnd = Date.now() + secs*1000;
+  const btn = $("#tBtn"); btn.classList.add("running");
+  clearInterval(tHandle);
+  tHandle = setInterval(() => {
+    const left = Math.max(0, Math.round((tEnd - Date.now())/1000));
+    btn.textContent = "◼ " + String(Math.floor(left/60)).padStart(2,"0") + ":" + String(left%60).padStart(2,"0");
+    if (left <= 0){
+      clearInterval(tHandle); tHandle = null;
+      btn.classList.remove("running"); btn.textContent = "Timer finished";
+      if (navigator.vibrate) navigator.vibrate([400,150,400,150,400]);
+      toast("Timer finished — step " + (cookI+1));
+    }
+  }, 250);
+  btn.onclick = () => { clearInterval(tHandle); tHandle = null; renderCook(); };
+}
+$("#cookClose").onclick = stopCook;
+$("#cookPrev").onclick = () => { if (cookI > 0){ cookI--; renderCook(); } };
+$("#cookNext").onclick = () => {
+  if (cookI < cookR.steps.length-1){ cookI++; renderCook(); }
+  else { const r = cookR; stopCook(); toast("Nice one"); logLeftovers(r); }
+};
+
+/* ============================================================
+   PLAN
+   ============================================================ */
+const DAYNAME = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i));
+
+function renderPlan(){
+  const today = todayISO();
+  let h = weekDays().map(d => {
+    const dt = new Date(d + "T12:00:00");
+    const day = db.plan[d] || {};
+    const slot = (key,label) => {
+      const v = day[key];
+      const r = v && db.recipes.find(x => x.id === v.id);
+      if (!v) return '<button class="slot empty" data-set="' + d + '|' + key + '">' +
+        '<span class="pic">＋</span><span><span class="lbl">' + label + '</span>' +
+        '<h4>Nothing yet</h4></span></button>';
+      return '<div class="slot"><button data-set="' + d + '|' + key + '" style="display:flex;gap:11px;align-items:center;flex:1;text-align:left">' +
+        '<span class="pic" style="' + picStyle(r || {title:v.title}) + '"></span>' +
+        '<span><span class="lbl">' + label + '</span><h4>' + esc(v.title) + '</h4></span></button>' +
+        '<button class="x" data-clear="' + d + '|' + key + '" aria-label="Remove">✕</button></div>';
+    };
+    return '<div class="panel tight"><div class="dayhead' + (d===today?" today":"") + '" style="padding-top:2px">' +
+      '<h3>' + (d===today ? "Today" : DAYNAME[dt.getDay()]) + '</h3>' +
+      '<span class="d">' + dt.getDate() + " " + dt.toLocaleString("en-GB",{month:"short"}) + '</span></div>' +
+      slot("lunch","Lunch") + slot("dinner","Dinner") + '</div>';
+  }).join("");
+
+  h += '<div class="panel pad"><div class="row">' +
+       '<button class="btn line" id="planShift" style="flex:1">Next week</button>' +
+       '<button class="btn line" id="planClear" style="flex:1">Clear week</button></div></div>';
+
+  $("#s-plan").innerHTML = h;
+  $("#planShift").onclick = () => { db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing the next seven days"); };
+  $("#planClear").onclick = () => {
+    weekDays().forEach(d => { ["lunch","dinner"].forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
+    save(); renderPlan(); toast("Week cleared");
+  };
+}
+
+$("#s-plan").addEventListener("click", e => {
+  const clr = e.target.closest("[data-clear]");
+  if (clr){
+    e.stopPropagation();
+    const [d,k] = clr.dataset.clear.split("|");
+    if (db.plan[d]) delete db.plan[d][k];
+    db.planTs[d + "|" + k] = Date.now();
+    save(); renderPlan(); return;
+  }
+  const st = e.target.closest("[data-set]");
+  if (st){ const [d,k] = st.dataset.set.split("|"); pickRecipeFor(d,k); }
+});
+
+function pickRecipeFor(day, slot){
+  const list = visibleRecipes().sort((a,b) => (b.fav?1:0)-(a.fav?1:0) || a.title.localeCompare(b.title));
+  if (!list.length){ toast("Add a recipe first"); return go("add"); }
+  openSheet("Pick a recipe",
+    list.map(r => '<button class="pick" data-pick="' + r.id + '"><span>' + (r.fav?"★ ":"") + esc(r.title) + '</span><span class="tag2">' + mins(r.mins) + '</span></button>').join(""));
+  $("#sheetPanel").addEventListener("click", function h(e){
+    const b = e.target.closest("[data-pick]"); if (!b) return;
+    const r = db.recipes.find(x => x.id === b.dataset.pick);
+    db.plan[day] = db.plan[day] || {};
+    db.plan[day][slot] = { id: r.id, title: r.title, serves: r.serves };
+    db.planTs[day + "|" + slot] = Date.now();
+    save(); closeSheet(); renderPlan();
+    toast("Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()]);
+    $("#sheetPanel").removeEventListener("click", h);
+  });
+}
+
+function pickDay(recipeId){
+  const r = db.recipes.find(x => x.id === recipeId);
+  openSheet("Put " + r.title + " on…",
+    weekDays().map(d => {
+      const dt = new Date(d+"T12:00:00");
+      return '<button class="pick" data-day="' + d + '"><span>' + (d===todayISO() ? "Today" : DAYNAME[dt.getDay()]) + '</span>' +
+             '<span class="tag2">' + dt.getDate() + " " + dt.toLocaleString("en-GB",{month:"short"}) + '</span></button>';
+    }).join(""));
+  $("#sheetPanel").addEventListener("click", function h(e){
+    const b = e.target.closest("[data-day]"); if (!b) return;
+    const d = b.dataset.day;
+    db.plan[d] = db.plan[d] || {};
+    db.plan[d].dinner = { id: r.id, title: r.title, serves: r.serves };
+    db.planTs[d + "|dinner"] = Date.now();
+    save(); closeSheet();
+    toast("Planned for " + (d===todayISO() ? "today" : DAYNAME[new Date(d+"T12:00:00").getDay()]));
+    $("#sheetPanel").removeEventListener("click", h);
+  });
+}
+
+/* ============================================================
+   SHOPPING
+   ============================================================ */
+function renderShop(){
+  const items = buildList();
+  const planned = weekDays().reduce((n,d) => n + Object.keys(db.plan[d]||{}).length, 0);
+
+  if (!items.length){
+    $("#s-shop").innerHTML = '<div class="panel"><div class="empty"><strong>Empty list</strong>' +
+      'Put a few meals on the plan and the shopping writes itself.</div>' +
+      '<div style="padding:0 18px"><button class="btn full" data-go="plan">Open the plan</button></div></div>';
+    return;
+  }
+
+  const order = AISLES.map(a => a[0]).concat(["Everything else"]);
+  const byAisle = {};
+  items.forEach(i => { (byAisle[i.aisle] = byAisle[i.aisle] || []).push(i); });
+  const doneCount = items.filter(i => db.ticked[i.key]).length;
+
+  let h = '<div class="panel tight"><div class="ph"><h2>' + items.length + ' items</h2>' +
+    '<button class="act go" id="shopCopy">Copy list</button></div>' +
+    '<div class="psub">' + doneCount + ' ticked · from ' + planned + ' planned meal' + (planned===1?"":"s") + '</div></div>';
+
+  h += order.filter(a => byAisle[a]).map(a => {
+    const rows = byAisle[a].sort((x,y) => x.name.localeCompare(y.name));
+    const done = rows.filter(i => db.ticked[i.key]).length;
+    return '<div class="panel tight"><div class="aisle" style="padding-top:2px"><h3>' + a + '</h3>' +
+      '<span class="c">' + done + ' of ' + rows.length + '</span></div>' +
+      rows.map(i => {
+        const isDone = !!db.ticked[i.key];
+        const amt = i.hasQty ? fmtNum(i.qty) + (i.unit ? " " + i.unit : "") : "";
+        return '<button class="buy' + (isDone?" done":"") + '" data-k="' + esc(i.key) + '">' +
+          '<span class="box">✓</span><span class="nm">' + esc(i.name) + '</span>' +
+          '<span class="amt">' + esc(amt) + '</span></button>';
+      }).join("") + '</div>';
+  }).join("");
+
+  h += '<div class="panel pad"><button class="btn line full" id="shopReset">Untick everything</button></div>';
+  $("#s-shop").innerHTML = h;
+
+  $("#shopReset").onclick = () => { db.ticked = {}; save(); renderShop(); toast("All unticked"); };
+  $("#shopCopy").onclick = async () => {
+    const text = order.filter(a => byAisle[a]).map(a =>
+      a.toUpperCase() + "\n" + byAisle[a].map(i =>
+        "- " + i.name + (i.hasQty ? " (" + fmtNum(i.qty) + (i.unit?" "+i.unit:"") + ")" : "")).join("\n")).join("\n\n");
+    try { await navigator.clipboard.writeText(text); toast("List copied"); }
+    catch(e){ openSheet("Shopping list", '<textarea readonly style="min-height:280px">' + esc(text) + '</textarea>'); }
+  };
+}
+
+$("#s-shop").addEventListener("click", e => {
+  const b = e.target.closest("[data-k]"); if (!b) return;
+  const k = b.dataset.k;
+  if (db.ticked[k]) delete db.ticked[k]; else db.ticked[k] = 1;
+  save(); renderShop();
+});
+
+/* ============================================================
+   FRIDGE
+   ============================================================ */
+function renderFridge(){
+  let h = '<div class="panel tight"><div class="ph"><h2>What\'s left over</h2></div>' +
+    '<div style="padding:0 18px 14px"><div class="row">' +
+    '<input type="text" id="leftIn" placeholder="e.g. half a cabbage" style="flex:1;min-width:58%">' +
+    '<button class="btn" id="leftAdd">Add</button></div></div>';
+
+  h += db.leftovers.length
+    ? '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:0 18px">' + db.leftovers.map(l =>
+        '<span class="lchip">' + esc(l.raw || l.name) + '<button data-rm="' + l.id + '" aria-label="Used up">✕</button></span>').join("") + '</div>'
+    : '<div class="empty">Nothing logged. Add half a cabbage and see what happens.</div>';
+  h += '</div>';
+
+  const matches = leftoverMatches();
+  if (db.leftovers.length){
+    h += '<div class="panel tight"><div class="ph"><h2>Cook these first</h2>' +
+      '<span class="act">' + matches.length + ' match' + (matches.length===1?"":"es") + '</span></div>';
+    h += matches.length
+      ? matches.map(m =>
+          '<button class="match" data-open="' + m.r.id + '">' +
+          '<span class="pic" style="' + picStyle(m.r) + '"></span>' +
+          '<span><h4>' + (m.r.fav?"★ ":"") + esc(m.r.title) + '</h4>' +
+          '<span class="uses">' + esc(m.hits.join(" · ")) + ' · ' + mins(m.r.mins) + '</span></span>' +
+          '<span class="n">' + m.hits.length + '</span></button>').join("")
+      : '<div class="empty"><strong>No match on the shelf</strong>Nothing saved uses these yet. Add a recipe and it turns up here.</div>';
+    h += '</div>';
+  }
+
+  $("#s-fridge").innerHTML = h;
+  $("#leftAdd").onclick = () => { addLeftover($("#leftIn").value); $("#leftIn").value = ""; renderFridge(); };
+  $("#leftIn").addEventListener("keydown", e => {
+    if (e.key === "Enter"){ addLeftover(e.target.value); e.target.value = ""; renderFridge(); }
+  });
+}
+
+$("#s-fridge").addEventListener("click", e => {
+  const b = e.target.closest("[data-rm]"); if (!b) return;
+  e.stopPropagation();
+  db.leftovers = db.leftovers.filter(l => l.id !== b.dataset.rm);
+  save(); renderFridge();
+});
+
+function logLeftovers(r){
+  openSheet("Anything left over?",
+    '<p class="muted" style="margin-top:-6px">Tap what you did not use up. It goes in the fridge list.</p>' +
+    '<div style="margin-top:12px">' + r.ing.map((i,ix) =>
+      '<button class="pick" data-left="' + ix + '"><span>' + esc(i.name) + '</span><span class="tag2">add</span></button>').join("") + '</div>' +
+    '<button class="btn line full" id="leftDone" style="margin-top:16px">Nothing left, thanks</button>');
+  $("#leftDone").onclick = () => { closeSheet(); if (current === "fridge") renderFridge(); if (current === "home") renderHome(); };
+  $("#sheetPanel").addEventListener("click", function h(e){
+    const b = e.target.closest("[data-left]"); if (!b) return;
+    const i = r.ing[parseInt(b.dataset.left)];
+    addLeftover((i.qty ? "half a " : "") + i.name);
+    b.querySelector(".tag2").textContent = "added";
+    b.style.opacity = ".5";
+  });
+}
+
+/* ============================================================
+   ADD + SETTINGS handlers
+   ============================================================ */
+let draft = null, editingId = null;
+
+$("#addTabs").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  $$("#addTabs button").forEach(x => x.classList.toggle("on", x === b));
+  ["text","photo","link"].forEach(t => $("#tab-" + t).style.display = (t === b.dataset.t ? "" : "none"));
+});
+
+function showDraft(d){
+  draft = d;
+  $("#editWrap").style.display = "";
+  $("#eTitle").value = d.title;
+  $("#eServes").value = d.serves;
+  $("#eMins").value = d.mins;
+  $("#eTags").value = (d.tags || []).join(", ");
+  $("#eIng").value = d.ing.map(i => (i.qty !== null && i.qty !== undefined ? fmtNum(i.qty) + (i.unit ? " " + i.unit : "") + " " : "") + i.name + (i.note ? ", " + i.note : "")).join("\n");
+  $("#eSteps").value = d.steps.join("\n");
+  $("#editWrap").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function status(el, msg, err){
+  $(el).innerHTML = '<div class="status' + (err?" err":"") + '">' + esc(msg) + '</div>';
+}
+
+$("#parseText").onclick = async () => {
+  const raw = $("#pasteBox").value.trim();
+  if (!raw) return toast("Paste a recipe first");
+  let d = sanitiseRecipe(parseRecipeText(raw));
+  if (db.settings.apiKey){
+    toast("Reading with your key…");
+    try { const ai = await aiParse(raw); if (ai && ai.ing.length) d = ai; }
+    catch(e){ toast("Key failed — used the built-in reader"); }
+  }
+  d.source = "Pasted"; showDraft(d);
+};
+
+/* ---- image preparation: OCR lives or dies on this ---- */
+function loadImage(file){
+  return new Promise((res, rej) => {
+    const img = new Image();
+    img.onload = () => res(img);
+    img.onerror = () => rej(new Error("That file is not an image"));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// Tesseract wants tall, high-contrast, roughly-binary text. A raw phone
+// photo is none of those things.
+function prepForOcr(img){
+  const maxDim = 2000, minDim = 1000;
+  let scale = 1;
+  const long = Math.max(img.width, img.height);
+  if (long > maxDim) scale = maxDim / long;
+  else if (long < minDim) scale = Math.min(2, minDim / long);
+
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+
+  const d = ctx.getImageData(0, 0, c.width, c.height);
+  const px = d.data;
+
+  // Greyscale, and build a histogram in the same pass.
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < px.length; i += 4){
+    const g = (px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114) | 0;
+    px[i] = px[i+1] = px[i+2] = g;
+    hist[g]++;
+  }
+
+  // Otsu's threshold — finds the split between ink and paper for this
+  // photo rather than assuming one, which is what handles poor lighting.
+  const total = c.width * c.height;
+  let sum = 0;
+  for (let i = 0; i < 256; i++) sum += i * hist[i];
+  let sumB = 0, wB = 0, best = 0, thr = 128;
+  for (let t = 0; t < 256; t++){
+    wB += hist[t]; if (!wB) continue;
+    const wF = total - wB; if (!wF) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB, mF = (sum - sumB) / wF;
+    const between = wB * wF * (mB - mF) * (mB - mF);
+    if (between > best){ best = between; thr = t; }
+  }
+
+  // Soft threshold: push toward black and white but leave a little
+  // grey, which reads better than a hard 1-bit image.
+  for (let i = 0; i < px.length; i += 4){
+    const g = px[i];
+    const v = g > thr ? Math.min(255, 255 - (255-g)*0.35) : Math.max(0, g*0.35);
+    px[i] = px[i+1] = px[i+2] = v;
+  }
+  ctx.putImageData(d, 0, 0);
+  return c;
+}
+
+function shrinkForApi(img){
+  const maxDim = 1568;
+  const long = Math.max(img.width, img.height);
+  const scale = long > maxDim ? maxDim / long : 1;
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+// Did the reader produce English, or alphabet soup? Real recipe text is
+// thick with a small set of words; noise is not.
+const REAL = ["the","and","a","of","to","in","with","for","until","then","add","heat","cook","stir","min","minute","salt","oil","water","pepper","cup","tbsp","tsp","g","ml","oven","pan","serve","sugar","flour","butter","onion","garlic","bake","boil","mix","chop"];
+function looksLikeWords(text){
+  const toks = text.toLowerCase().match(/[a-z]+/g) || [];
+  if (toks.length < 25) return false;
+  const hits = toks.filter(t => REAL.includes(t)).length;
+  return hits / toks.length > 0.20;
+}
+
+async function aiParseImage(dataUrl, mediaType){
+  const key = db.settings.apiKey;
+  if (!key) return null;
+  const b64 = dataUrl.split(",")[1];
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "x-api-key":key,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    },
+    body: JSON.stringify({
+      model:"claude-sonnet-4-6", max_tokens:2000,
+      messages:[{ role:"user", content:[
+        { type:"image", source:{ type:"base64", media_type:mediaType, data:b64 } },
+        { type:"text", text:`Read the recipe in this photo. Reply with JSON only — no prose, no markdown fences.
+Shape: {"title":string,"serves":number,"mins":number,"tags":string[],"ing":string[],"steps":string[]}
+Keep quantities on the ingredient lines, e.g. "400g tin chopped tomatoes".
+Steps are plain sentences in order. If part of the page is cut off or unreadable, leave that out rather than guessing.
+If the photo contains no recipe at all, reply {"error":"no recipe"}.` }
+      ]}]
+    })
+  });
+  if (!res.ok) throw new Error("The API refused that (" + res.status + ")");
+  const data = await res.json();
+  const txt = (data.content||[]).filter(c => c.type === "text").map(c => c.text).join("").replace(/```json|```/g,"").trim();
+  const j = JSON.parse(txt);
+  if (j.error) throw new Error("No recipe visible in that photo");
+  return {
+    title: j.title || "Untitled recipe",
+    serves: Math.min(24, j.serves || 4),
+    mins: j.mins || 30,
+    tags: j.tags || [],
+    ing: (j.ing||[]).map(parseIngredient).filter(Boolean),
+    steps: j.steps || []
+  };
+}
+
+$("#photoIn").addEventListener("change", async e => {
+  const file = e.target.files[0]; if (!file) return;
+  $("#editWrap").style.display = "none";
+
+  try {
+    const img = await loadImage(file);
+
+    // With a key, the model reads the picture directly. That is far more
+    // accurate than character recognition and handles angles and columns.
+    if (db.settings.apiKey){
+      status("#ocrStatus", "Reading the photo…");
+      try {
+        const d = sanitiseRecipe(await aiParseImage(shrinkForApi(img).toDataURL("image/jpeg", 0.85), "image/jpeg"));
+        if (d && d.ing.length){
+          d.source = "Photo";
+          status("#ocrStatus", "Read it. Give the quantities a glance before saving.");
+          return showDraft(d);
+        }
+      } catch(err){
+        status("#ocrStatus", err.message + " — falling back to on-device reading…");
+      }
+    }
+
+    status("#ocrStatus", "Loading the reader…");
+    if (!window.Tesseract){
+      await new Promise((res, rej) => {
+        const s = document.createElement("script");
+        s.src = "https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js";
+        s.onload = res; s.onerror = () => rej(new Error("could not load the reader — check your signal"));
+        document.head.appendChild(s);
+      });
+    }
+
+    status("#ocrStatus", "Preparing the image…");
+    const prepped = prepForOcr(img);
+
+    const { data } = await Tesseract.recognize(prepped, "eng", {
+      logger: m => { if (m.status === "recognizing text") status("#ocrStatus", "Reading… " + Math.round(m.progress*100) + "%"); }
+    });
+    const text = (data.text || "").trim();
+
+    if (!looksLikeWords(text)){
+      status("#ocrStatus",
+        "That photo came back as gibberish, so I have not filled anything in. On-device reading needs a flat, straight-on, evenly lit page — no curve in the spine, no shadow across the text. If the page will not cooperate, use the Paste tab, or add an API key in Settings and the photo gets read properly instead.", true);
+      e.target.value = "";
+      return;
+    }
+
+    let d = sanitiseRecipe(parseRecipeText(text));
+    d.source = "Photo";
+    status("#ocrStatus", "Read it — check every line. On-device reading gets quantities wrong more often than anything else.");
+    showDraft(d);
+
+  } catch(err){
+    status("#ocrStatus", "Could not read that photo: " + err.message + ". Use the Paste tab instead.", true);
+    e.target.value = "";
+  }
+});
+
+// Recipe pages can't be fetched straight from the browser — other sites
+// don't allow it. Try each route in turn and keep the reasons, so a
+// failure says what went wrong rather than just "failed".
+async function fetchPage(url, onTry){
+  const tried = [];
+
+  // 1. Your own Netlify function. Best route: nothing third-party sees it.
+  try {
+    onTry && onTry("Trying your own fetcher…");
+    const res = await fetch("/.netlify/functions/fetch-recipe?url=" + encodeURIComponent(url));
+    if (res.ok){
+      const j = await res.json();
+      if (j.html) return { html: j.html, via: "your own fetcher" };
+      tried.push("your fetcher: " + (j.error || "empty reply"));
+    } else {
+      tried.push("your fetcher: " + (res.status === 404 ? "not deployed" : "error " + res.status));
+    }
+  } catch(e){ tried.push("your fetcher: unreachable"); }
+
+  // 2. Public relays, in order of how much of the page they preserve.
+  //    HTML keeps the structured recipe data; markdown is the last resort.
+  const relays = [
+    { name: "relay", url: u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u) },
+    { name: "backup relay", url: u => "https://corsproxy.io/?" + encodeURIComponent(u) },
+    { name: "third relay", url: u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u) },
+    { name: "reader", url: u => "https://r.jina.ai/" + u, headers: { "x-respond-with": "html" } },
+    { name: "text relay", url: u => "https://r.jina.ai/" + u }
+  ];
+
+  for (const r of relays){
+    try {
+      onTry && onTry("Trying the " + r.name + "…");
+      const res = await fetch(r.url(url), {
+        headers: r.headers || undefined,
+        signal: AbortSignal.timeout(15000)
+      });
+      if (!res.ok){ tried.push(r.name + ": error " + res.status); continue; }
+      const html = await res.text();
+      if (!html || html.length < 200){ tried.push(r.name + ": empty page"); continue; }
+      return { html, via: "the " + r.name };
+    } catch(e){
+      tried.push(r.name + ": " + (e.name === "TimeoutError" ? "timed out" : "blocked or offline"));
+    }
+  }
+
+  const err = new Error("Nothing could reach that page");
+  err.detail = tried.join(" · ");
+  throw err;
+}
+
+$("#fetchLink").onclick = async () => {
+  const url = $("#linkIn").value.trim();
+  if (!/^https?:\/\//.test(url)) return status("#linkStatus", "That does not look like a web address.", true);
+  status("#linkStatus", "Fetching…");
+  try {
+    const { html, via } = await fetchPage(url, msg => status("#linkStatus", msg));
+    status("#linkStatus", "Reading the page…");
+
+    let found = extractRecipe(html);
+    let d = found && found.d;
+
+    if (!d && db.settings.apiKey){
+      status("#linkStatus", "Nothing obvious in the markup — reading it with your key…");
+      const plain = (domFrom(html)?.body?.textContent || html).replace(/\s+/g," ").slice(0, 14000);
+      try { d = sanitiseRecipe(await aiParse(plain)); found = { how: "your key" }; } catch(e){}
+    }
+
+    if (!d || !d.ing.length){
+      throw new Error("That page loaded via " + via + ", but no recipe could be read out of it. " +
+        "Some sites build the recipe in the browser, so it isn't in the page Mise receives");
+    }
+
+    d.source = new URL(url).hostname.replace(/^www\./,"");
+    d.url = url;
+    status("#linkStatus", "Got it from " + found.how + ", via " + via +
+      (d.steps.length ? "." : ". No method found — you'll need to add the steps.") + " Check it over below.");
+    showDraft(d);
+  } catch(err){
+    status("#linkStatus", err.message + "." + (err.detail ? " Tried — " + err.detail + "." : "") +
+      " Copy the recipe text into the Paste tab instead.", true);
+  }
+};
+
+$("#discardDraft").onclick = () => {
+  draft = null; editingId = null;
+  $("#saveRecipe").textContent = "Save to the shelf";
+  $("#editWrap").style.display = "none";
+  $("#pasteBox").value = ""; $("#linkIn").value = ""; $("#photoIn").value = "";
+  $("#ocrStatus").innerHTML = ""; $("#linkStatus").innerHTML = "";
+  toast("Cleared");
+};
+
+$("#saveRecipe").onclick = () => {
+  const title = $("#eTitle").value.trim();
+  if (!title) return toast("Give it a title");
+  const ing = $("#eIng").value.split("\n").map(parseIngredient).filter(Boolean);
+  const steps = $("#eSteps").value.split("\n").map(s => s.trim()).filter(Boolean);
+  if (!steps.length) return toast("Add at least one step");
+
+  // Editing keeps everything the form doesn't cover: favourite, photo,
+  // nutrition, where it came from, and when it was added.
+  if (editingId){
+    const r = db.recipes.find(x => x.id === editingId);
+    if (r){
+      r.title = title;
+      r.serves = Math.max(1, parseInt($("#eServes").value) || 4);
+      r.mins = Math.max(0, parseInt($("#eMins").value) || 30);
+      r.tags = $("#eTags").value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+      r.ing = ing; r.steps = steps;
+      touch(r); save();
+      const id = editingId;
+      editingId = null; draft = null;
+      $("#editWrap").style.display = "none";
+      $("#saveRecipe").textContent = "Save to the shelf";
+      toast("Recipe updated");
+      return openRecipe(id);
+    }
+    editingId = null;
+  }
+
+  db.recipes.push({
+    id: uid(), title,
+    serves: Math.max(1, parseInt($("#eServes").value) || 4),
+    mins: Math.max(0, parseInt($("#eMins").value) || 30),
+    tags: $("#eTags").value.split(",").map(t => t.trim().toLowerCase()).filter(Boolean),
+    ing, steps, fav: false, image: draft && draft.image ? draft.image : "",
+    nutrition: draft && draft.nutrition ? draft.nutrition : null,
+    source: draft && draft.source ? draft.source : "Added by hand",
+    url: draft && draft.url ? draft.url : "", added: Date.now(), updated: Date.now()
+  });
+  save();
+  draft = null;
+  $("#editWrap").style.display = "none";
+  $("#pasteBox").value = ""; $("#linkIn").value = "";
+  $("#ocrStatus").innerHTML = ""; $("#linkStatus").innerHTML = "";
+  toast("Saved to the shelf");
+  go("shelf");
+};
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+function renderSettings(){
+  $("#setAvoid").value = db.settings.avoid || "";
+  const pn = $("#photoNote");
+  if (pn) pn.textContent = db.settings.apiKey
+    ? "Photographed pages are read by the model using your key, which handles angles and awkward layouts."
+    : "Works best on a flat, well-lit page, photographed straight on. Reading happens on your phone — nothing is sent anywhere.";
+  $("#setKey").value = db.settings.apiKey || "";
+  $("#buildNote").textContent = "Build " + BUILD;
+
+  const on = db.sync.mode === "gist";
+  $("#syncOff").classList.toggle("on", !on);
+  $("#syncGist").classList.toggle("on", on);
+  $("#syncPanel").style.display = on ? "" : "none";
+  $("#syncToken").value = db.sync.token || "";
+  $("#syncCode").value = db.sync.gistId || "";
+  $("#syncState").textContent = !db.sync.gistId
+    ? "Not connected yet."
+    : "Connected. Last synced " + (db.sync.lastSync ? new Date(db.sync.lastSync).toLocaleString("en-GB") : "never") + ".";
+
+  $("#storeNote").textContent = "Using about " + asKB(storageUsed()) + " of roughly 5 MB. " + (Store.persistent
+    ? "Saved on this phone. Nothing leaves it unless you add an API key."
+    : "This browser is blocking storage, so anything you add now lasts until you close the tab. Deploy the app to your own address and it will save properly.");
+}
+$("#setAvoid").addEventListener("change", e => { db.settings.avoid = e.target.value; db.settingsTs = Date.now(); save(); toast("Updated"); });
+$("#setKey").addEventListener("change", e => {
+  const v = e.target.value.trim();
+  if (keyShape(v) === "github"){
+    e.target.value = "";
+    openSheet("That is your GitHub token",
+      '<p class="muted" style="margin-top:-6px">This field wants an Anthropic key, and nothing has been saved. The GitHub token belongs in section 03 below.</p>' +
+      '<button class="btn full" id="shapeOk2" style="margin-top:14px">Understood</button>');
+    $("#shapeOk2").onclick = closeSheet;
+    return;
+  }
+  db.settings.apiKey = v; save();
+  toast(v ? "Key saved on this phone" : "Key cleared");
+});
+
+$("#updBtn").onclick = () => {
+  openSheet("Reload the latest build?",
+    '<p class="muted" style="margin-top:-6px">Clears the offline copy and fetches the app fresh. Your recipes, plans and lists are stored separately and are not touched.</p>' +
+    '<button class="btn full" id="updYes" style="margin-top:14px">Reload it</button>' +
+    '<button class="btn ghost full" id="updNo" style="margin-top:10px">Cancel</button>');
+  $("#updNo").onclick = closeSheet;
+  $("#updYes").onclick = forceUpdate;
+};
+
+/* The two secret fields sit near each other, and sending the wrong one
+   leaks a working credential to a service that has no business with it.
+   Check the shape before anything is transmitted. */
+function keyShape(v){
+  const t = (v || "").trim();
+  if (!t) return "empty";
+  if (/^sk-ant-/i.test(t)) return "anthropic";
+  if (/^(gh[pousr]_|github_pat_)/i.test(t)) return "github";
+  return "unknown";
+}
+
+$("#syncOff").onclick = () => { db.sync.mode = "off"; Store.save(db); renderSettings(); toast("Sync off"); };
+$("#syncGist").onclick = () => { db.sync.mode = "gist"; Store.save(db); renderSettings(); };
+$("#syncToken").addEventListener("change", e => {
+  const v = e.target.value.trim();
+  if (keyShape(v) === "anthropic"){
+    e.target.value = "";
+    openSheet("That is your Anthropic key",
+      '<p class="muted" style="margin-top:-6px">This field wants a GitHub token, and Mise has not saved or sent what you pasted. The Anthropic key belongs in section 02 above.</p>' +
+      '<p class="muted">If you pasted it here before and tapped Connect, it was sent to GitHub. Revoke that key in the Anthropic console and make a new one.</p>' +
+      '<button class="btn full" id="shapeOk" style="margin-top:14px">Understood</button>');
+    $("#shapeOk").onclick = closeSheet;
+    return;
+  }
+  db.sync.token = v; Store.save(db);
+  toast(v ? "Token saved on this phone" : "Token cleared");
+});
+
+$("#syncConnect").onclick = async () => {
+  if (!db.sync.token) return toast("Paste a token first");
+  toast("Connecting…");
+  try {
+    if (!db.sync.gistId) await gistCreate();
+    Store.save(db);
+    await syncNow(false);
+    renderSettings();
+  } catch(err){ toast(err.message); }
+};
+
+$("#syncNowBtn").onclick = () => syncNow(false);
+
+$("#syncJoin").onclick = () => {
+  const code = $("#syncCode").value.trim();
+  if (!code) return toast("Paste the code from your other device");
+  if (!db.sync.token) return toast("Add a token on this device too");
+  openSheet("Join that store?",
+    '<p class="muted" style="margin-top:-6px">This device will merge with the shelf already there. Nothing on either side is deleted — where both have changed the same recipe, the newer edit wins.</p>' +
+    '<button class="btn full" id="joinYes" style="margin-top:14px">Join and merge</button>' +
+    '<button class="btn ghost full" id="joinNo" style="margin-top:10px">Cancel</button>');
+  $("#joinNo").onclick = closeSheet;
+  $("#joinYes").onclick = async () => {
+    db.sync.gistId = code; db.sync.mode = "gist"; Store.save(db);
+    closeSheet();
+    await syncNow(false);
+    renderSettings(); go("shelf");
+  };
+};
+
+/* File-based transfer — works with no account at all. */
+$("#sendCopy").onclick = async () => {
+  const text = JSON.stringify(syncPayload(), null, 2);
+  const name = "mise-" + todayISO() + ".json";
+  const file = new File([text], name, { type: "application/json" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })){
+    try { await navigator.share({ files: [file], title: "Mise recipes" }); return; } catch(e){ if (e.name === "AbortError") return; }
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = name; a.click(); URL.revokeObjectURL(a.href);
+  toast("Saved — send that file to your other device");
+};
+
+$("#mergeCopy").onclick = () => $("#mergeFile").click();
+$("#mergeFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const incoming = JSON.parse(rd.result);
+      if (!incoming.recipes) throw new Error();
+      const { db: merged, stats } = mergeDb(db, incoming);
+      const sync = db.sync;
+      db = merged; db.sync = sync;
+      Store.save(db);
+      toast(stats.added + " new, " + stats.updated + " updated, " + stats.removed + " removed");
+      go("shelf");
+    } catch(err){ toast("That file is not a Mise copy"); }
+    e.target.value = "";
+  };
+  rd.readAsText(f);
+});
+
+$("#expBtn").onclick = () => {
+  const blob = new Blob([JSON.stringify(db,null,2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "mise-backup-" + todayISO() + ".json";
+  a.click(); URL.revokeObjectURL(a.href);
+  toast("Backup downloaded");
+};
+$("#impBtn").onclick = () => $("#impFile").click();
+$("#impFile").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const j = JSON.parse(rd.result);
+      if (!j.recipes) throw new Error();
+      db = j; db.settings = db.settings || {}; save();
+      toast("Backup restored"); go("shelf");
+    } catch(err){ toast("That file is not a Mise backup"); }
+  };
+  rd.readAsText(f);
+});
+$("#wipeBtn").onclick = () => {
+  openSheet("Delete everything?",
+    '<p class="muted" style="margin-top:-6px">Every recipe, plan and list on this phone goes. Export a backup first if you want one.</p>' +
+    '<button class="btn danger full" id="wipeYes" style="margin-top:14px">Delete it all</button>' +
+    '<button class="btn ghost full" id="wipeNo" style="margin-top:10px">Cancel</button>');
+  $("#wipeNo").onclick = closeSheet;
+  $("#wipeYes").onclick = () => { db = freshDb(); save(); closeSheet(); go("shelf"); toast("Wiped back to the starter shelf"); };
+};
+
+
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+document.addEventListener("keydown", e => {
+  if (!$("#cook").classList.contains("on")) return;
+  if (e.key === "ArrowRight") $("#cookNext").click();
+  if (e.key === "ArrowLeft") $("#cookPrev").click();
+  if (e.key === "Escape") stopCook();
+});
+
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      reg.update();
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        if (sw) sw.addEventListener("statechange", () => {
+          if (sw.state === "installed" && navigator.serviceWorker.controller) sw.postMessage("skipWaiting");
+        });
+      });
+    }).catch(() => {});
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloaded) return; reloaded = true; location.reload();
+    });
+  });
+}
+
+async function forceUpdate(){
+  try {
+    if ("caches" in window) for (const k of await caches.keys()) await caches.delete(k);
+    if ("serviceWorker" in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) await r.unregister();
+    }
+  } catch(e){}
+  location.reload(true);
+}
+
+go("home");
+
+if (purgedToken){
+  setTimeout(() => {
+    go("set");
+    openSheet("An Anthropic key was stored as a sync token",
+      '<p class="muted" style="margin-top:-6px">It has been removed from this device and sync is switched off.</p>' +
+      '<p class="muted" style="margin-top:10px">That key was sent to GitHub when you tapped Connect. Revoke it in the Anthropic console and create a new one.</p>' +
+      '<button class="btn full" id="purgeOk" style="margin-top:16px">Understood</button>');
+    $("#purgeOk").onclick = closeSheet;
+  }, 400);
+} else if (db.sync.mode === "gist" && db.sync.gistId){
+  setTimeout(() => syncNow(true), 1200);
+}
+</script>
+</body>
+</html>

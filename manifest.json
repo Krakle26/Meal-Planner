@@ -1,0 +1,19 @@
+{
+  "name": "Mise \u2014 recipes, plans, no waste",
+  "short_name": "Mise",
+  "description": "Save recipes, cook them step by step, plan the week, shop from the plan, and use up what's left.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F0F0F1",
+  "theme_color": "#F0F0F1",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%23E8720C'/%3E%3Ctext x='256' y='340' font-family='Helvetica,Arial,sans-serif' font-size='280' font-weight='800' fill='%23FFFFFF' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

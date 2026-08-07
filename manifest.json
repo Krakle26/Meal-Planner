@@ -1,0 +1,52 @@
+{
+  "id": "/",
+  "name": "Mise — recipes, plans, no waste",
+  "short_name": "Mise",
+  "description": "Save recipes, cook them step by step, plan the week, shop from the plan, and use up what's left.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#F0F0F1",
+  "theme_color": "#F0F0F1",
+  "categories": ["food", "lifestyle", "productivity"],
+  "lang": "en-GB",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Shopping list",
+      "short_name": "Shopping",
+      "description": "The list built from this week's plan",
+      "url": "./index.html#shop",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "What's in the fridge",
+      "short_name": "Fridge",
+      "description": "Log leftovers and find what uses them",
+      "url": "./index.html#fridge",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

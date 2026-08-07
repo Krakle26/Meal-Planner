@@ -1,0 +1,13 @@
+[
+  {
+    "_comment": "PLACEHOLDER. Replace this whole file with the assetlinks.json from your PWABuilder package — only that one carries your signing fingerprint. Until you do, the Android app will show a browser address bar.",
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.netlify.YOURSITE.twa",
+      "sha256_cert_fingerprints": [
+        "REPLACE:WITH:THE:FINGERPRINT:FROM:YOUR:PWABUILDER:PACKAGE"
+      ]
+    }
+  }
+]

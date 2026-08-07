@@ -1,0 +1,13 @@
+# Backup archives. Keep these outside the folder — anything committed here
+# is also published by Netlify, and a zip of the site inside the site is
+# both a needless download and a copy that goes stale silently.
+*.zip
+
+# Windows and editor leftovers
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/

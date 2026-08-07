@@ -1,5 +1,11 @@
 # Getting Mise onto GitHub and Netlify
 
+> **This is done.** The folder is a repository, `origin` points at
+> `https://github.com/Krakle26/Meal-Planner.git`, and `main` has been
+> pushed. Day-to-day updates are in `UPDATING.md`; the rest of this file is
+> kept as the record of how it was set up, and for doing it again on
+> another machine.
+
 Your commands were close. Two things need changing before they'll work.
 
 **You can't `cd` into a zip.** Windows shows an archive as if it were a
@@ -17,7 +23,7 @@ In File Explorer, right-click `Misu.zip` → **Extract All…** and set the
 destination to:
 
 ```
-C:\Users\richa\Documents\meal-planner
+C:\Users\richa\Documents\Meal Planner App
 ```
 
 Anywhere is fine as long as it's an empty folder that isn't Downloads.
@@ -47,15 +53,19 @@ Netlify won't find the site.
 Open PowerShell and run these one at a time:
 
 ```powershell
-cd C:\Users\richa\Documents\meal-planner
+cd "C:\Users\richa\Documents\Meal Planner App"
 
-git init
+git init -b main
 git add .
 git commit -m "Mise: recipes, planning and shopping"
-git branch -M main
-git remote add origin https://github.com/Krakle/Meal-Planner.git
+git remote add origin https://github.com/Krakle26/Meal-Planner.git
 git push -u origin main
 ```
+
+The account is **Krakle26**, not `Krakle` — both exist on GitHub, and the
+wrong one costs you a confusing detour: GitHub answers a repository it
+won't show you with a login prompt rather than a 404, so a URL typo looks
+exactly like an authentication problem.
 
 If `git push` asks you to sign in, use the browser prompt rather than
 typing a password — GitHub stopped accepting account passwords for Git in

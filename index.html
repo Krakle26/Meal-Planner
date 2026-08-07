@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-06d";
+const BUILD = "2026-08-07a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1575,9 +1575,13 @@ async function gistWrite(){
   });
 }
 
-let pushTimer = null, syncing = false;
+let pushTimer = null, syncing = false, pushPending = false;
 function schedulePush(){
-  if (db.sync.mode !== "gist" || !db.sync.gistId || syncing) return;
+  if (db.sync.mode !== "gist" || !db.sync.gistId) return;
+  // An edit made while a sync was in flight used to be dropped on the floor:
+  // the guard returned and nothing queued it again once the sync finished,
+  // so it sat here until the next unrelated edit happened to push it.
+  if (syncing){ pushPending = true; return; }
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => { syncNow(true); }, 4000);
 }
@@ -1602,12 +1606,13 @@ async function syncNow(quiet){
     db.sync.lastSync = Date.now();
     Store.save(db);
     if (!quiet) toast("Synced");
-    if (current === "shelf" || current === "home") renderRecipes();
-    if (current === "plan") renderPlan();
-    if (current === "set") renderSettings();
+    renderRecipes();
   } catch(err){
     if (!quiet) toast("Sync failed: " + err.message);
-  } finally { syncing = false; }
+  } finally {
+    syncing = false;
+    if (pushPending){ pushPending = false; schedulePush(); }
+  }
 }
 
 /* ============================================================
@@ -1796,6 +1801,7 @@ function go(name){
   if (name === "shop") renderShop();
   if (name === "fridge") renderFridge();
   if (name === "set") renderSettings();
+  if (name === "add") updatePhotoNote();
 }
 $("#nav").addEventListener("click", e => { const b = e.target.closest("button"); if (b) go(b.dataset.s); });
 $("#avBtn").onclick = () => go("set");
@@ -1804,8 +1810,15 @@ $("#avBtn").onclick = () => go("set");
 $("#fab").onclick = () => { resetAddForm(); go("add"); };
 $("#syncBtn").onclick = () => syncNow(false);
 
-/* renderRecipes is what the sync code calls after a merge. */
-function renderRecipes(){ if (current === "shelf") renderShelf(); if (current === "home") renderHome(); }
+/* renderRecipes is what the sync code calls after a merge: it redraws
+   whichever screen is on, not just the two that list recipes. The shopping
+   list and the fridge are built from the same records, and they were left
+   showing the shelf as it stood before the merge. */
+function renderRecipes(){
+  const draw = { home:renderHome, shelf:renderShelf, detail:renderDetail, plan:renderPlan,
+                 shop:renderShop, fridge:renderFridge, set:renderSettings }[current];
+  if (draw) draw();
+}
 
 /* ============================================================
    HOME — what am I cooking, and what needs using up
@@ -1879,7 +1892,7 @@ function renderHome(){
          matches.slice(0,6).map(m =>
            '<button class="big" data-open="' + m.r.id + '" style="' + picStyle(m.r) + '">' +
            '<span class="tag">' + mins(m.r.mins) + '</span>' +
-           '<span class="mark' + (m.r.fav?" on":"") + '">' + (m.r.fav?"★":"☆") + '</span>' +
+           '<span class="mark' + (m.r.fav?" on":"") + '" data-fav="' + m.r.id + '">' + (m.r.fav?"★":"☆") + '</span>' +
            '<h3>' + esc(m.r.title) + '</h3>' +
            '<span class="meta">Uses ' + m.hits.length + ' of your leftovers</span></button>').join("") +
          '</div></div>';
@@ -2344,7 +2357,13 @@ const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i))
    list, built from that window, stopped matching what Home called today. Roll
    forward once the whole week is behind us, never backwards, so looking ahead
    still works. */
+/* Tapping Last week is a deliberate look backwards, and rolling on the next
+   tap of anything snapped the window straight back to today. Hold off for
+   the rest of the visit once the week has been set by hand; a reload starts
+   the roll again, which is the case this was written for. */
+let weekPinned = false;
 function rollWeek(){
+  if (weekPinned) return false;
   const t = todayISO();
   if (t > addDays(db.weekStart, 6)){ db.weekStart = t; return true; }
   return false;
@@ -2378,8 +2397,8 @@ function renderPlan(){
        '<button class="btn line full" id="planClear" style="margin-top:10px">Clear this week</button></div>';
 
   $("#s-plan").innerHTML = h;
-  $("#planBack").onclick = () => { db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing the previous seven days"); };
-  $("#planShift").onclick = () => { db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing the next seven days"); };
+  $("#planBack").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing the previous seven days"); };
+  $("#planShift").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing the next seven days"); };
   $("#planClear").onclick = () => {
     weekDays().forEach(d => { ["lunch","dinner"].forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
     save(); renderPlan(); toast("Week cleared");
@@ -3127,12 +3146,21 @@ $("#saveRecipe").onclick = () => {
 /* ============================================================
    SETTINGS
    ============================================================ */
-function renderSettings(){
-  $("#setAvoid").value = db.settings.avoid || "";
+/* The note on the Photo tab says where the reading happens, and that turns
+   on whether a key is saved. It was only ever written when Settings drew,
+   which is before the key gets typed — so straight after saving one the tab
+   still promised that nothing leaves the phone. */
+function updatePhotoNote(){
   const pn = $("#photoNote");
-  if (pn) pn.textContent = db.settings.apiKey
+  if (!pn) return;
+  pn.textContent = db.settings.apiKey
     ? "Photographed pages are read by the model using your key, which handles angles and awkward layouts."
     : "Works best on a flat, well-lit page, photographed straight on. Reading happens on your phone — nothing is sent anywhere.";
+}
+
+function renderSettings(){
+  $("#setAvoid").value = db.settings.avoid || "";
+  updatePhotoNote();
   $("#setKey").value = db.settings.apiKey || "";
   $("#buildNote").textContent = "Build " + BUILD;
 
@@ -3162,6 +3190,7 @@ $("#setKey").addEventListener("change", e => {
     return;
   }
   db.settings.apiKey = v; save();
+  updatePhotoNote();
   toast(v ? "Key saved on this phone" : "Key cleared");
 });
 

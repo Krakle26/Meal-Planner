@@ -89,7 +89,11 @@ main{padding:0 10px calc(var(--nav-h) + env(safe-area-inset-bottom) + 22px)}
 .lchip button{color:inherit;opacity:.6;font-size:15px;line-height:1}
 
 /* ---------- cards ---------- */
-.pic{background:var(--line-2);background-size:cover;background-position:center}
+/* These are spans, and height does nothing to an inline box — the shelf
+   grid and the home rows were drawing their previews 0px tall. The ones
+   inside a flex row happened to survive, because a flex item is blockified
+   for you, which is why this went unnoticed on the plan and detail screens. */
+.pic{display:block;background:var(--line-2);background-size:cover;background-position:center}
 .big{
   flex:0 0 auto;width:186px;height:216px;border-radius:15px;overflow:hidden;position:relative;
   display:flex;flex-direction:column;justify-content:flex-end;padding:13px;text-align:left;
@@ -507,7 +511,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-06b";
+const BUILD = "2026-08-06c";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1630,11 +1634,44 @@ function closeSheet(){ clearSheetPick(); $("#sheet").classList.remove("on"); }
 $("#sheet .scrim").addEventListener("click", closeSheet);
 
 /* Recipes imported from links usually carry a photo. Typed ones don't, so
-   they get a colour drawn from their own name — stable, and never the same
-   two next to each other by accident. */
-const PICS = [["#D98E4A","#8E4B22"],["#CDA94E","#8A6B25"],["#9FB86B","#4F6B35"],
-              ["#D06A4E","#8C3320"],["#E0B978","#A87A3C"],["#88A9B5","#4A6B78"]];
-function hashOf(s){ let h = 0; for (let i = 0; i < s.length; i++) h = (h*31 + s.charCodeAt(i))|0; return Math.abs(h); }
+   they get a colour of their own instead — the same one on every screen and
+   on both phones, since it comes from the recipe rather than from where it
+   happens to be drawn.
+
+   The first version of this had six colours, five of them a shade of brown,
+   which is no use: a shelf of them read as one colour and you had to fall
+   back on the titles. These are spaced around the wheel so neighbours
+   differ by hue, which the eye separates far faster than lightness. They
+   are all held to one dusty, mid-depth register so they still look like a
+   set rather than a paint chart, and every one of them carries white text
+   under the card gradient.
+
+   Hand-picking the hexes went wrong the first time — two of the reds landed
+   seven degrees apart and read as one colour on the shelf. Stepping evenly
+   round the wheel instead makes that mistake impossible to write. */
+const PICS = Array.from({ length: 14 }, (_, i) => {
+  const hue = Math.round(15 + i * 360 / 14);
+  // Yellows and greens look brighter than blues at the same lightness, so
+  // that band comes down a little and the set still reads as one family.
+  const lift = hue > 40 && hue < 170 ? 7 : 0;
+  return ["hsl(" + hue + " 44% " + (54 - lift) + "%)",
+          "hsl(" + hue + " 48% " + (32 - Math.round(lift / 2)) + "%)"];
+});
+/* The obvious `h*31 + charCode` barely moves its low bits, and a palette
+   picked with `% 14` reads exactly those bits — ten recipes came out as
+   seven colours with one of them used four times. FNV-1a plus a murmur
+   finalizer costs nothing here and spreads them properly. */
+function hashOf(s){
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 16; h = Math.imul(h, 2246822507);
+  h ^= h >>> 13; h = Math.imul(h, 3266489909);
+  h ^= h >>> 16;
+  return h >>> 0;
+}
 
 /* An imported recipe brings its photo address from someone else's page, and
    that address lands inside a style attribute. Anything that could close the

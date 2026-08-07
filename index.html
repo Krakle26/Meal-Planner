@@ -1203,8 +1203,18 @@ function aisleOf(name, unit){
   // A tin of tomatoes belongs with the tins, not the fresh tomatoes.
   if (unit === "tin") return "Tins & jars";
   if (/\b(tin|tinned|can|canned|jar|jarred|carton)\b/.test(k)) return "Tins & jars";
-  for (const [aisle, words] of AISLES) if (words.some(w => k.includes(w))) return aisle;
-  return "Everything else";
+  // The longest match wins, not the earliest aisle. Taking the first hit in
+  // aisle order meant a short generic word beat the specific one that came
+  // later: "butter beans" was filed under butter, "coconut milk" under
+  // milk, "sweetcorn" under corn. Only lines carrying "tin" escaped it,
+  // via the check above.
+  let best = "Everything else", len = 0;
+  for (const [aisle, words] of AISLES){
+    for (const w of words){
+      if (w.length > len && k.includes(w)){ best = aisle; len = w.length; }
+    }
+  }
+  return best;
 }
 
 /* ============================================================
@@ -1297,11 +1307,37 @@ function freshDb(){
     leftovers: [],
     ticked: {},
     deleted: {},
+    tickedTs: {},
+    leftoversDeleted: {},
     settings: { avoid: "seafood, fish, prawn, shrimp, salmon, tuna, cod, crab, mussel, squid, anchovy", apiKey: "" },
     settingsTs: 0,
     sync: { mode: "off", token: "", gistId: "", lastSync: 0 },
     weekStart: todayISO()
   };
+}
+
+/* A recipe can arrive from a gist, a sent copy or a restored backup written
+   by any build, and one missing its tags or ingredients is not a cosmetic
+   problem: the avoid filter reads both on every render, so a single bad
+   record throws and takes Home, Shelf and Fridge down with it, with no way
+   back but wiping storage. Fill the gaps at the door rather than guarding
+   every reader. */
+function normaliseRecipe(r){
+  if (!r || typeof r !== "object") return null;
+  if (!r.id) r.id = uid();
+  if (typeof r.title !== "string" || !r.title) r.title = "Untitled recipe";
+  r.tags = Array.isArray(r.tags) ? r.tags.filter(t => typeof t === "string") : [];
+  r.ing = Array.isArray(r.ing) ? r.ing.filter(i => i && typeof i.name === "string") : [];
+  r.steps = Array.isArray(r.steps) ? r.steps.filter(s => typeof s === "string") : [];
+  r.serves = Math.max(1, parseInt(r.serves) || 4);
+  r.mins = Math.max(0, parseInt(r.mins) || 30);
+  r.fav = !!r.fav;
+  if (typeof r.image !== "string") r.image = "";
+  if (typeof r.source !== "string") r.source = "";
+  if (!r.added) r.added = Date.now();
+  // Older recipes predate change tracking; treat them as last touched when added.
+  if (!r.updated) r.updated = r.added;
+  return r;
 }
 /* Anything loaded from disk gets the same treatment: a shelf saved by an
    older build, and a file picked in Restore, both arrive with pieces
@@ -1315,13 +1351,14 @@ function normaliseDb(d){
   d.planTs = d.planTs || {};
   d.leftovers = Array.isArray(d.leftovers) ? d.leftovers : [];
   d.ticked = d.ticked || {};
+  d.tickedTs = d.tickedTs || {};
   d.deleted = d.deleted || {};
+  d.leftoversDeleted = d.leftoversDeleted || {};
   d.settings = Object.assign({}, base.settings, d.settings || {});
   d.settingsTs = d.settingsTs || 0;
   d.sync = Object.assign({ mode: "off", token: "", gistId: "", lastSync: 0 }, d.sync || {});
   if (!d.weekStart) d.weekStart = todayISO();
-  // Older recipes predate change tracking; treat them as last touched when added.
-  d.recipes.forEach(r => { if (!r.updated) r.updated = r.added || 1; });
+  d.recipes = d.recipes.map(normaliseRecipe).filter(Boolean);
   return d;
 }
 
@@ -1352,6 +1389,15 @@ const touch = r => { r.updated = Date.now(); return r; };
    ============================================================ */
 const SYNC_FILE = "mise-sync.json";
 
+/* Leftovers are matched on the ingredient rather than the wording, so
+   "half a cabbage" and "cabbage" are one thing in the fridge — and one
+   thing to cross off. Removal tombstones are keyed by this too, so
+   crossing off "half a cabbage" here still cancels "cabbage" over there. */
+function leftoverKey(l){
+  const p = parseIngredient((l && (l.name || l.raw)) || "");
+  return ingKey((p && p.name) || (l && l.name) || "");
+}
+
 function mergeDb(local, remote){
   const out = JSON.parse(JSON.stringify(local));
   const stats = { added: 0, updated: 0, removed: 0 };
@@ -1367,7 +1413,11 @@ function mergeDb(local, remote){
 
   const byId = {};
   out.recipes.forEach(r => { byId[r.id] = r; });
-  remote.recipes.forEach(r => {
+  remote.recipes.forEach(raw => {
+    // Whatever the other side wrote, it has to be a whole record before it
+    // joins the shelf — a merge is the one door a restore doesn't cover.
+    const r = normaliseRecipe(raw);
+    if (!r) return;
     const mine = byId[r.id];
     if (!mine){ byId[r.id] = r; stats.added++; }
     else if (stamp(r) > stamp(mine)){
@@ -1414,19 +1464,41 @@ function mergeDb(local, remote){
     }
   }
 
-  // Leftovers: union, matched on the ingredient rather than the wording,
-  // so "half a cabbage" and "cabbage" don't both end up in the fridge.
-  const leftKey = l => {
-    const p = parseIngredient(l.name || l.raw || "");
-    return ingKey((p && p.name) || l.name || "");
+  // Leftovers: a union, but one that carries removals. Without tombstones
+  // a plain union could only ever add, so anything crossed off in the
+  // fridge came straight back from the other device on the next sync.
+  // A thing logged again later outlives the marker that removed it.
+  out.leftoversDeleted = out.leftoversDeleted || {};
+  for (const k in (remote.leftoversDeleted || {})){
+    out.leftoversDeleted[k] = Math.max(out.leftoversDeleted[k] || 0, remote.leftoversDeleted[k]);
+  }
+  const buried = (k, l) => {
+    const gone = k && out.leftoversDeleted[k];
+    return !!gone && gone > ((l && l.added) || 0);
   };
-  const seen = new Set(out.leftovers.map(leftKey));
+  out.leftovers = out.leftovers.filter(l => !buried(leftoverKey(l), l));
+  const seen = new Set(out.leftovers.map(leftoverKey));
   (remote.leftovers || []).forEach(l => {
-    const k = leftKey(l);
-    if (k && !seen.has(k)){ out.leftovers.push(l); seen.add(k); }
+    const k = leftoverKey(l);
+    if (!k || seen.has(k) || buried(k, l)) return;
+    out.leftovers.push(l); seen.add(k);
   });
 
-  out.ticked = Object.assign({}, remote.ticked || {}, out.ticked || {});
+  // Ticking and unticking both have to cross. Unioning the ticked keys made
+  // unticking impossible: clearing one deletes the key here, leaving nothing
+  // to win with, so the remote's copy simply came back. Stamped the same way
+  // the plan is, later change wins.
+  out.ticked = out.ticked || {}; out.tickedTs = out.tickedTs || {};
+  const rTick = remote.ticked || {}, rTickTs = remote.tickedTs || {};
+  for (const key of new Set(Object.keys(rTick).concat(Object.keys(rTickTs)))){
+    // A copy from a build that kept no stamps can only be unioned, which is
+    // all it ever was — but it must not undo a stamped change made here.
+    if (!rTickTs[key] && !out.tickedTs[key]){ if (rTick[key]) out.ticked[key] = 1; continue; }
+    const when = rTickTs[key] || 0;
+    if (when <= (out.tickedTs[key] || 0)) continue;
+    if (rTick[key]) out.ticked[key] = 1; else delete out.ticked[key];
+    out.tickedTs[key] = when;
+  }
 
   // Settings move as a block, newest wins — but never wipe a key that
   // only exists on this device.
@@ -2402,7 +2474,12 @@ function renderShop(){
   h += '<div class="panel pad"><button class="btn line full" id="shopReset">Untick everything</button></div>';
   $("#s-shop").innerHTML = h;
 
-  $("#shopReset").onclick = () => { db.ticked = {}; save(); renderShop(); toast("All unticked"); };
+  $("#shopReset").onclick = () => {
+    const now = Date.now();
+    Object.keys(db.ticked).forEach(k => { db.tickedTs[k] = now; });
+    db.ticked = {};
+    save(); renderShop(); toast("All unticked");
+  };
   $("#shopCopy").onclick = async () => {
     const text = order.filter(a => byAisle[a]).map(a =>
       a.toUpperCase() + "\n" + byAisle[a].map(i =>
@@ -2416,6 +2493,7 @@ $("#s-shop").addEventListener("click", e => {
   const b = e.target.closest("[data-k]"); if (!b) return;
   const k = b.dataset.k;
   if (db.ticked[k]) delete db.ticked[k]; else db.ticked[k] = 1;
+  db.tickedTs[k] = Date.now();
   save(); renderShop();
 });
 
@@ -2459,6 +2537,10 @@ function renderFridge(){
 $("#s-fridge").addEventListener("click", e => {
   const b = e.target.closest("[data-rm]"); if (!b) return;
   e.stopPropagation();
+  // Leave a marker, or the other device hands it straight back on the next sync.
+  const gone = db.leftovers.find(l => l.id === b.dataset.rm);
+  const k = gone && leftoverKey(gone);
+  if (k) db.leftoversDeleted[k] = Date.now();
   db.leftovers = db.leftovers.filter(l => l.id !== b.dataset.rm);
   save(); renderFridge();
 });

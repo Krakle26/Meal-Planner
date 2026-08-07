@@ -111,13 +111,19 @@ main{padding:0 10px calc(var(--nav-h) + env(safe-area-inset-bottom) + 22px)}
   background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted);
 }
 .mark.on{color:var(--orange)}
-.small{flex:0 0 auto;width:132px;text-align:left}
+/* A button centres its own content vertically. These stretch to match the
+   tallest card in the row, so one with a shorter title had everything
+   nudged down by half a line and sat out of line with its neighbours.
+   Stacking the content explicitly starts it at the top instead. */
+.small{flex:0 0 auto;width:132px;text-align:left;display:flex;flex-direction:column}
 .small .pic{height:104px;border-radius:13px;position:relative}
 .small h4{font-size:14px;font-weight:600;margin-top:9px;line-height:1.25}
 .small .t{font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:500}
 
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 18px}
-.gcard{border-radius:15px;overflow:hidden;position:relative;text-align:left;background:var(--page)}
+/* Same reason as .small — a shorter title in one grid cell would otherwise
+   float its swatch down against the taller card beside it. */
+.gcard{border-radius:15px;overflow:hidden;position:relative;text-align:left;background:var(--page);display:flex;flex-direction:column}
 .gcard .pic{height:118px;position:relative}
 .gcard .body{padding:10px 11px 13px}
 .gcard h4{font-size:14.5px;font-weight:700;line-height:1.22}
@@ -511,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-06c";
+const BUILD = "2026-08-06d";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;

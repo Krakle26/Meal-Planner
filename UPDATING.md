@@ -69,28 +69,29 @@ account passwords for Git since 2021.
 
 ## Then check it actually landed
 
-Netlify usually publishes within a minute.
+GitHub Pages usually republishes within a minute.
 
 ```
-https://your-site.netlify.app/version.txt
+https://krakle26.github.io/Meal-Planner/version.txt
 ```
 
-It should read **2026-08-06b**. Then open the app and check Settings shows
-the same build. If the file says `2026-08-06b` and the app says something
-older, that's cache, not a failed deploy — use *Check for an update* in
-Settings.
+It should match the build string in `version.txt`. Then open the app and
+check Settings shows the same one. If the file is right and the app says
+something older, that's cache, not a failed deploy — use *Check for an
+update* in Settings.
 
-Two things in this build are worth a smoke test, because neither could be
-tested properly on the desktop:
+Worth a smoke test, since neither can be checked from the desktop:
 
-- **The Netlify function.** Open
-  `https://your-site.netlify.app/.netlify/functions/fetch-recipe?url=https://example.com`
-  — it should return JSON, not a 404. Then check that a private address is
-  refused: swap the url for `http://127.0.0.1` and you should get
-  *"That address is not a public web page"*.
+- **Removals crossing a sync.** With both phones on the same store, cross
+  something off the fridge on one, or untick a shopping item, then open the
+  other. It should stay gone. Before this it came straight back.
 - **Photograph a recipe.** Take two pages, crop each to just the recipe,
   and confirm the ingredients stay out of the method. Then save it and
   confirm the photos and text clear from the Add screen.
+
+Don't test `/.netlify/functions/fetch-recipe` — it 404s by design on
+GitHub Pages, which runs no server code. Link import falls back to a
+public relay; `DEPLOYING.md` explains what that costs.
 
 Also worth confirming once on the phone: the launcher shortcuts. Long-press
 the app icon and you should get **Shopping** and **Fridge**, each opening

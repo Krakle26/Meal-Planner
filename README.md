@@ -5,41 +5,51 @@ itself, and a fridge list that tells you what to cook with the half cabbage.
 
 ## Putting it live
 
-Drag `mise-site.zip` onto the Netlify deploys page. Do not unzip it first —
-Netlify unpacks it and keeps the folder structure, which is the part that
-matters. Dragging a plain folder tends to lose nested files, and the link
-fetcher lives in one.
+```powershell
+git add -A
+git commit -m "what changed"
+git push
+```
 
-Inside the zip:
+GitHub Pages republishes from `main` within a minute or so. There is no
+build step and nothing to compile — the files are served as they are.
+
+What's in the repo:
 
 ```
-index.html
-manifest.json
-sw.js
-version.txt
-netlify.toml
-netlify/functions/fetch-recipe.js
+index.html                          the whole app
+manifest.json  sw.js  icon-*.png    installing it to a home screen
+version.txt                         the build string, for checking a deploy
+verify.py                           pre-push checks (needs Python, and Node
+                                    for the syntax check)
+netlify.toml                        dormant - see below
+netlify/functions/fetch-recipe.js   dormant - see below
 ```
+
+### Where it's hosted
+
+GitHub Pages, at `https://krakle26.github.io/Meal-Planner/`, published
+straight from `main`. A `git push` is the whole deploy.
 
 ### Checking a deploy actually landed
 
-Open `https://your-site.netlify.app/version.txt`. It shows the build string
-of whatever is really on the server, with no app or cache in the way.
-Compare it against the build shown in the app under Settings. If the two
-disagree, the app is serving a cached copy — Settings has a "Check for an
-update" button, or add `?v=2` to the address to bypass it.
+Open `https://krakle26.github.io/Meal-Planner/version.txt`. It shows the
+build string of whatever is really on the server, with no app or cache in
+the way. Compare it against the build shown in the app under Settings. If
+the two disagree, the app is serving a cached copy — Settings has a "Check
+for an update" button, or add `?v=2` to the address to bypass it.
 
-### If the link fetcher doesn't register
+### Link import goes through a public relay
 
-Drag-and-drop deploys don't run a build, and Netlify is inconsistent about
-picking up functions from them. Open
-`https://your-site.netlify.app/.netlify/functions/fetch-recipe?url=https://example.com`
-— JSON means it works, a 404 means it didn't register.
+`netlify/functions/fetch-recipe.js` would fetch recipe pages from a server
+you control, so nobody else sees what you import. **It does not run on
+GitHub Pages**, which serves static files and nothing else — the app
+requests it, gets a 404, and falls through to a public relay.
 
-This is not fatal. Link import falls back to a public relay and keeps
-working; the app tells you which route it used. The only cost is that the
-relay sees the recipe addresses you import, and it's slower. To get your
-own fetcher working, connect the repo to Git instead of dragging.
+This is not fatal: link import works, and the app tells you which route it
+used. The cost is that the relay sees the addresses you import, and it's
+slower. The function is kept in the repo because it needs no changes — it
+starts working the day the site moves to a host that runs functions.
 
 ## Putting it on your phone
 
@@ -53,7 +63,7 @@ without a signal once it has loaded once.
 |---|---|---|
 | Recipes, plans, lists | Your phone | Stored in the browser, never uploaded |
 | Photo reading | Your phone | Tesseract, loaded from a CDN on first use |
-| Link importing | Netlify function | Browsers can't fetch other sites directly |
+| Link importing | A public relay | Browsers can't fetch other sites directly, and the bundled function doesn't run on Pages |
 | Sharper reading | Anthropic API | Only if you add your own key in Settings |
 
 Everything except link importing works offline.

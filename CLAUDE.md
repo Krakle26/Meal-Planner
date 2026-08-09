@@ -6,26 +6,32 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mise — a single-page PWA for recipes, weekly planning, and shopping lists.
 There is no build step, no package manager, and no test suite: the entire
-app is `index.html` (HTML + CSS + JS in one file), backed by a single
-Netlify serverless function and a service worker for offline use.
+app is `index.html` (HTML + CSS + JS in one file), plus a service worker
+for offline use.
+
+**Hosting**: GitHub Pages, published from `main` at
+`https://krakle26.github.io/Meal-Planner/`. Static files only — no server
+code runs. `netlify/functions/fetch-recipe.js` and `netlify.toml` are kept
+in the repo but are **dormant**: the app requests the function, gets a 404,
+and falls back to a public relay. Don't describe the fetcher as live, and
+don't propose a fix that assumes it runs.
 
 ## Commands
 
 There is no build, lint, or test tooling in this repo. Development is:
 
 - **Run locally**: open `index.html` directly in a browser, or serve the
-  folder with any static file server. The Netlify function
-  (`netlify/functions/fetch-recipe.js`) only runs when deployed, so link
-  import falls back to a public relay when testing locally.
-- **Deploy**: `git push` to the linked GitHub repo (Netlify auto-deploys,
-  publish directory `.`, no build command). Drag-and-drop deploys of a zip
-  also work but don't reliably register the Netlify function — see
-  `DEPLOYING.md`.
+  folder with any static file server. Link import falls back to a public
+  relay locally, the same as in production.
+- **Deploy**: `git push` to `origin main`. Pages republishes within about a
+  minute; the repo's Actions tab shows the run. See `DEPLOYING.md`.
 - **Verify a deploy landed**: compare `/version.txt` on the live site
   against `const BUILD` in `index.html` and the build shown in the app's
-  Settings screen. See `DEPLOYING.md` / `GIT-SETUP.md` for the full
-  checklist, including the `/.netlify/functions/fetch-recipe?url=...`
-  smoke test.
+  Settings screen. See `DEPLOYING.md` for the checklist. There is no
+  function smoke test — `/.netlify/functions/…` 404s by design.
+- **Pre-push checks**: `python verify.py .` if Python is installed. The
+  `javascript parses` check additionally needs Node and reports SKIP
+  without it.
 
 **After any change that ships**, bump the build string in both
 `version.txt` and `const BUILD = "…"` near the top of `index.html`'s
@@ -81,9 +87,11 @@ succeeds: `fromJsonLd` → `fromMicrodata` → `fromHeadings` → `fromPlainText
 Every import lands in an editable form before saving (`showDraft`) because
 none of these are guaranteed correct on odd layouts.
 
-- Link imports go through `fetchPage()`, which calls the Netlify function
-  first and falls back to a public relay if the function isn't registered
-  (drag-and-drop deploys don't reliably register it — see `DEPLOYING.md`).
+- Link imports go through `fetchPage()`, which tries the bundled function
+  first and falls back to a public relay. On GitHub Pages the function
+  always 404s, so the relay is the route every import actually takes; the
+  first attempt is a deliberate no-cost try in case the site ever moves to
+  a host that runs it.
 - Photo imports use on-device OCR (Tesseract, loaded from CDN) by default;
   `looksLikeWords()` sanity-checks the OCR output against a real-word list
   (`REAL`) and refuses to fill the form with garbage rather than silently

@@ -44,14 +44,14 @@ hasn't registered. Reload twice and try again.
 ## Route B — a real APK you can send to each other
 
 This wraps the site in an Android app. It's still the web app inside, which
-turns out to be the good part: when you push a change to Netlify, both
+turns out to be the good part: when you push a change to GitHub, both
 phones get it on next open. No rebuilding, no reinstalling.
 
 ### 1. Deploy first
 
 The packager reads your live site, so the manifest and icons have to be
-published. Push the current files to Netlify and check
-`https://your-site.netlify.app/manifest.json` loads and lists three icons.
+published. Push the current files to GitHub and check
+`https://krakle26.github.io/Meal-Planner/manifest.json` loads and lists three icons.
 
 ### 2. Build the package
 
@@ -89,7 +89,7 @@ git commit -m "Add asset links for the Android app"
 git push
 ```
 
-Check `https://your-site.netlify.app/.well-known/assetlinks.json` returns
+Check `https://krakle26.github.io/Meal-Planner/.well-known/assetlinks.json` returns
 the file before installing.
 
 ### 4. Install on both phones

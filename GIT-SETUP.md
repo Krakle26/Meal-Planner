@@ -1,4 +1,4 @@
-# Getting Mise onto GitHub and Netlify
+# Getting Mise onto GitHub and GitHub Pages
 
 > **This is done.** The folder is a repository, `origin` points at
 > `https://github.com/Krakle26/Meal-Planner.git`, and `main` has been
@@ -43,8 +43,8 @@ DEPLOYING.md
 ```
 
 If extracting produced a single folder with everything nested inside it,
-step into that folder instead — Git needs `index.html` at the top level or
-Netlify won't find the site.
+step into that folder instead — `index.html` has to be at the top level or
+the published site won't find it.
 
 ---
 
@@ -81,36 +81,28 @@ git push -u origin main
 
 ---
 
-## 3. Point Netlify at the repo
+## 3. Turn on GitHub Pages
 
-In your Netlify site: **Site configuration → Build & deploy → Continuous
-deployment → Link repository**, then pick `Krakle/Meal-Planner`.
+In the repository on github.com: **Settings → Pages**. Under *Build and
+deployment*, set the source to **Deploy from a branch**, pick `main` and
+the `/ (root)` folder, and save.
 
-When it asks for build settings:
-
-| Field | Value |
-|---|---|
-| Build command | *leave empty* |
-| Publish directory | `.` |
-| Functions directory | leave it — `netlify.toml` already sets this |
-
-There's nothing to compile, so an empty build command is correct.
+There is nothing to compile, so no build step or workflow is needed.
 
 ---
 
 ## 4. Check it worked
 
-Two addresses:
+```
+https://krakle26.github.io/Meal-Planner/version.txt
+```
 
-- `https://your-site.netlify.app/version.txt` → should read the build
-  string from `version.txt`
-- `https://your-site.netlify.app/.netlify/functions/fetch-recipe?url=https://example.com`
-  → should return JSON, not a 404
+It should read the build string from `version.txt`. If it 404s, Pages
+hasn't published yet — the repository's **Actions** tab shows the run.
 
-That second one is the payoff. Drag-and-drop deploys never registered the
-link fetcher, so imports have been going through public relays. With Git,
-Netlify picks the function up properly and your imports stop depending on
-someone else's server.
+Note that the recipe fetcher at `/.netlify/functions/fetch-recipe` will
+404, and that is expected: Pages serves static files only. Link import
+falls back to a public relay and keeps working. See `DEPLOYING.md`.
 
 ---
 
@@ -124,7 +116,7 @@ git commit -m "what changed"
 git push
 ```
 
-Netlify publishes within a minute or so.
+GitHub Pages republishes within a minute or so.
 
 Two habits worth keeping:
 
@@ -132,9 +124,9 @@ Two habits worth keeping:
   `const BUILD = "…"`) whenever you change something. They should always
   match. When they don't, the app is serving a cached copy — and you'll
   know that immediately instead of debugging the wrong thing.
-- **Stop using drag-and-drop.** Once the repo is linked, a manual drop
-  creates a deploy that doesn't match the repository, and the next push
-  silently overwrites it. Pick one route and stay on it.
+- **Push, don't upload.** Pages publishes whatever is on `main`. Editing a
+  file through github.com works too, but then your computer is behind —
+  `git pull` before the next change or the push will be rejected.
 
 ## One thing not to commit
 

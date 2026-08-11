@@ -4,7 +4,7 @@
 // on the next load, and a cached copy is only a fallback for when there is
 // no signal. Static files are served cache-first and refreshed in the
 // background. Bump CACHE whenever the shell changes.
-const CACHE = "mise-v24";
+const CACHE = "mise-v25";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {

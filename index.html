@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-07b";
+const BUILD = "2026-08-11a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -539,6 +539,14 @@ const Store = (() => {
 const uid = () => Math.random().toString(36).slice(2,10);
 const todayISO = () => new Date().toISOString().slice(0,10);
 const addDays = (iso,n) => { const d = new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+
+/* The plan week runs Saturday to Friday, so the weekend sits at the front
+   of it rather than being split across two windows — and the shopping list,
+   which is built from the same seven days, covers the weekend shop.
+   0 is Sunday and 6 is Saturday; change this one number to move the day. */
+const WEEK_START_DAY = 6;
+const startOfWeek = iso =>
+  addDays(iso, -(((new Date(iso + "T12:00:00").getDay() - WEEK_START_DAY) + 7) % 7));
 
 let db = Store.load();
 
@@ -1312,7 +1320,7 @@ function freshDb(){
     settings: { avoid: "seafood, fish, prawn, shrimp, salmon, tuna, cod, crab, mussel, squid, anchovy", apiKey: "" },
     settingsTs: 0,
     sync: { mode: "off", token: "", gistId: "", lastSync: 0 },
-    weekStart: todayISO()
+    weekStart: startOfWeek(todayISO())
   };
 }
 
@@ -1357,7 +1365,10 @@ function normaliseDb(d){
   d.settings = Object.assign({}, base.settings, d.settings || {});
   d.settingsTs = d.settingsTs || 0;
   d.sync = Object.assign({ mode: "off", token: "", gistId: "", lastSync: 0 }, d.sync || {});
-  if (!d.weekStart) d.weekStart = todayISO();
+  // A shelf saved before the week was anchored starts on whatever day it
+  // happened to roll on, so snap it. Aligning an already-aligned date is a
+  // no-op, and a week moved by hand keeps its offset either way.
+  d.weekStart = startOfWeek(d.weekStart || todayISO());
   d.recipes = d.recipes.map(normaliseRecipe).filter(Boolean);
   return d;
 }
@@ -2355,17 +2366,19 @@ const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i))
 /* The week only moved when you tapped Next week, so a shelf left alone for a
    fortnight still showed a window that had already gone by — and the shopping
    list, built from that window, stopped matching what Home called today. Roll
-   forward once the whole week is behind us, never backwards, so looking ahead
-   still works. */
-/* Tapping Last week is a deliberate look backwards, and rolling on the next
-   tap of anything snapped the window straight back to today. Hold off for
-   the rest of the visit once the week has been set by hand; a reload starts
-   the roll again, which is the case this was written for. */
+   forward to the Saturday we are now in, never backwards, so looking ahead
+   still works. Landing on the week boundary rather than on today is what
+   keeps every window Saturday-aligned once one of them is.
+
+   Tapping Last week is a deliberate look backwards, and rolling on the next
+   tap of anything snapped the window straight back. Hold off for the rest of
+   the visit once the week has been set by hand; a reload starts the roll
+   again, which is the case this was written for. */
 let weekPinned = false;
 function rollWeek(){
   if (weekPinned) return false;
-  const t = todayISO();
-  if (t > addDays(db.weekStart, 6)){ db.weekStart = t; return true; }
+  const t = startOfWeek(todayISO());
+  if (t > db.weekStart){ db.weekStart = t; return true; }
   return false;
 }
 
@@ -2397,8 +2410,10 @@ function renderPlan(){
        '<button class="btn line full" id="planClear" style="margin-top:10px">Clear this week</button></div>';
 
   $("#s-plan").innerHTML = h;
-  $("#planBack").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing the previous seven days"); };
-  $("#planShift").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing the next seven days"); };
+  // The window is a real Saturday-to-Friday week now, so these can say so —
+  // they read "seven days" back when it started on whatever day it rolled on.
+  $("#planBack").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing last week"); };
+  $("#planShift").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing next week"); };
   $("#planClear").onclick = () => {
     weekDays().forEach(d => { ["lunch","dinner"].forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
     save(); renderPlan(); toast("Week cleared");

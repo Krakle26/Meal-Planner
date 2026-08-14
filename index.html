@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-11a";
+const BUILD = "2026-08-14a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1824,8 +1824,15 @@ $("#syncBtn").onclick = () => syncNow(false);
 /* renderRecipes is what the sync code calls after a merge: it redraws
    whichever screen is on, not just the two that list recipes. The shopping
    list and the fridge are built from the same records, and they were left
-   showing the shelf as it stood before the merge. */
+   showing the shelf as it stood before the merge. A background sync can land
+   mid-keystroke though — on the Fridge's "add a leftover" box, Shelf's
+   search, or Settings' text fields — so skip the redraw while one of those
+   is focused rather than wipe what's half-typed; the next sync or the next
+   navigation picks the change up instead. */
 function renderRecipes(){
+  const active = document.activeElement;
+  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") &&
+      active.closest(".screen.on")) return;
   const draw = { home:renderHome, shelf:renderShelf, detail:renderDetail, plan:renderPlan,
                  shop:renderShop, fridge:renderFridge, set:renderSettings }[current];
   if (draw) draw();
@@ -2371,13 +2378,15 @@ const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i))
    keeps every window Saturday-aligned once one of them is.
 
    Tapping Last week is a deliberate look backwards, and rolling on the next
-   tap of anything snapped the window straight back. Hold off for the rest of
-   the visit once the week has been set by hand; a reload starts the roll
-   again, which is the case this was written for. */
+   tap of anything snapped the window straight back. Hold off right after the
+   week has been set by hand — but only until the window catches up on its
+   own (this week's Saturday falls back to it); a pin that outlived that
+   would silently disable the catch-up above for the rest of the visit. */
 let weekPinned = false;
 function rollWeek(){
-  if (weekPinned) return false;
   const t = startOfWeek(todayISO());
+  if (weekPinned && t <= db.weekStart) weekPinned = false;
+  if (weekPinned) return false;
   if (t > db.weekStart){ db.weekStart = t; return true; }
   return false;
 }

@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-08-14a";
+const BUILD = "2026-09-05a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1821,18 +1821,28 @@ $("#avBtn").onclick = () => go("set");
 $("#fab").onclick = () => { resetAddForm(); go("add"); };
 $("#syncBtn").onclick = () => syncNow(false);
 
+// Tracks the last time any input/textarea actually had a keystroke, so
+// renderRecipes (below) can tell "mid-keystroke" apart from "merely
+// focused" — tapping into a field to look at it shouldn't block a redraw.
+let lastKeystroke = 0;
+document.addEventListener("input", e => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") lastKeystroke = Date.now();
+}, true);
+
 /* renderRecipes is what the sync code calls after a merge: it redraws
    whichever screen is on, not just the two that list recipes. The shopping
    list and the fridge are built from the same records, and they were left
    showing the shelf as it stood before the merge. A background sync can land
    mid-keystroke though — on the Fridge's "add a leftover" box, Shelf's
    search, or Settings' text fields — so skip the redraw while one of those
-   is focused rather than wipe what's half-typed; the next sync or the next
-   navigation picks the change up instead. */
+   is being actively typed into rather than wipe what's half-typed; the next
+   sync or the next navigation picks the change up instead. A field that's
+   merely focused (cursor parked, nothing typed recently) doesn't hold up
+   the redraw. */
 function renderRecipes(){
   const active = document.activeElement;
   if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") &&
-      active.closest(".screen.on")) return;
+      active.closest(".screen.on") && Date.now() - lastKeystroke < 2000) return;
   const draw = { home:renderHome, shelf:renderShelf, detail:renderDetail, plan:renderPlan,
                  shop:renderShop, fridge:renderFridge, set:renderSettings }[current];
   if (draw) draw();
@@ -2380,12 +2390,20 @@ const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i))
    Tapping Last week is a deliberate look backwards, and rolling on the next
    tap of anything snapped the window straight back. Hold off right after the
    week has been set by hand — but only until the window catches up on its
-   own (this week's Saturday falls back to it); a pin that outlived that
-   would silently disable the catch-up above for the rest of the visit. */
+   own; a pin that outlived that would silently disable the catch-up above
+   for the rest of the visit.
+
+   "Catches up" only means something for a forward pin (Next week): it holds
+   until this week's Saturday reaches the pinned one (t >= db.weekStart), at
+   which point the two agree anyway and normal catch-up can resume. A
+   backward pin (Last week) has no such moment — db.weekStart is already
+   behind t and only falls further behind as days pass — so it holds for the
+   rest of the visit instead, same as before this comment. */
 let weekPinned = false;
+let weekPinDir = 0; // +1 while pinned forward (Next week), -1 while pinned back (Last week)
 function rollWeek(){
   const t = startOfWeek(todayISO());
-  if (weekPinned && t <= db.weekStart) weekPinned = false;
+  if (weekPinned && weekPinDir > 0 && t >= db.weekStart) weekPinned = false;
   if (weekPinned) return false;
   if (t > db.weekStart){ db.weekStart = t; return true; }
   return false;
@@ -2421,8 +2439,8 @@ function renderPlan(){
   $("#s-plan").innerHTML = h;
   // The window is a real Saturday-to-Friday week now, so these can say so —
   // they read "seven days" back when it started on whatever day it rolled on.
-  $("#planBack").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing last week"); };
-  $("#planShift").onclick = () => { weekPinned = true; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing next week"); };
+  $("#planBack").onclick = () => { weekPinned = true; weekPinDir = -1; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing last week"); };
+  $("#planShift").onclick = () => { weekPinned = true; weekPinDir = 1; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing next week"); };
   $("#planClear").onclick = () => {
     weekDays().forEach(d => { ["lunch","dinner"].forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
     save(); renderPlan(); toast("Week cleared");

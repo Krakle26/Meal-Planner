@@ -250,6 +250,8 @@ label.field>span{display:block;font-size:13px;font-weight:600;color:var(--muted)
 .slot h4{font-size:14.5px;font-weight:600;margin-top:3px}
 .slot.empty .pic{background:var(--page);border:1.5px dashed var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--line-2);font-size:20px}
 .slot.empty h4{color:var(--muted);font-weight:500}
+.slot .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px}
+.slot .sub.over{color:var(--red)}
 .slot .x{margin-left:auto;color:var(--muted);font-size:17px;padding:6px}
 
 /* ---------- shop ---------- */
@@ -517,7 +519,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13c";
+const BUILD = "2026-09-13d";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1659,12 +1661,56 @@ function stepSeconds(text){
 }
 
 
+/* The meals a day holds. Named once so the batch helpers below and every
+   walk of the plan agree on it. */
+const SLOTS = ["lunch","dinner"];
+
+/* ---- batch cooking ----
+   One pot on Saturday, eaten again on Tuesday. A day eating from a batch
+   carries `batch: true` and its own portion count; the day it was cooked on
+   is worked out here rather than stored on the entry. A stored pointer would
+   dangle the moment the cook is cleared, and mergeDb merges each day|slot on
+   its own, so two devices can easily leave one aimed at nothing.
+
+   Prefer the most recent cook at or before the day, so cooking the same dish
+   twice in a week still resolves; fall back to the first cook in the week, so
+   a batch day marked while the plan is still half-filled finds its pot. */
+function batchSource(day, recipeId){
+  let before = null, first = null;
+  for (const d of weekDays()){
+    for (const sl of SLOTS){
+      const v = (db.plan[d] || {})[sl];
+      if (!v || v.batch || v.id !== recipeId) continue;
+      if (!first) first = { day: d, slot: sl, serves: v.serves };
+      if (d <= day) before = { day: d, slot: sl, serves: v.serves };
+    }
+  }
+  return before || first;
+}
+
+/* How much of a cook the days eating from it have spoken for. The cook day's
+   own share isn't counted — it is whatever is left over. */
+function batchClaimed(cookDay, recipeId){
+  let n = 0;
+  for (const d of weekDays()){
+    for (const sl of SLOTS){
+      const v = (db.plan[d] || {})[sl];
+      if (!v || !v.batch || v.id !== recipeId) continue;
+      const src = batchSource(d, recipeId);
+      if (src && src.day === cookDay) n += v.serves || 0;
+    }
+  }
+  return n;
+}
+
 function buildList(){
   const bag = {};
   weekDays().forEach(d => {
     const day = db.plan[d] || {};
-    ["lunch","dinner"].forEach(sl => {
-      const entry = day[sl]; if (!entry) return;
+    SLOTS.forEach(sl => {
+      // A batch day eats a pot that is already being shopped for on the day
+      // it gets cooked. Counting it again would buy the ingredients twice.
+      const entry = day[sl]; if (!entry || entry.batch) return;
       const r = db.recipes.find(x => x.id === entry.id); if (!r) return;
       const k = entry.serves / r.serves;
       r.ing.forEach(i => {
@@ -1867,11 +1913,11 @@ function leftoverMatches(){
 
 function todaysMeals(){
   const day = db.plan[todayISO()] || {};
-  return ["lunch","dinner"].map(slot => {
+  return SLOTS.map(slot => {
     const e = day[slot];
     if (!e) return null;
     const r = db.recipes.find(x => x.id === e.id);
-    return r ? { slot, r, serves: e.serves } : null;
+    return r ? { slot, r, serves: e.serves, batch: !!e.batch } : null;
   }).filter(Boolean);
 }
 
@@ -1902,15 +1948,24 @@ function renderHome(){
     meals.forEach(m => {
       h += '<button class="tonight" data-open="' + m.r.id + '" style="margin-bottom:12px">' +
            '<span class="pic" style="' + picStyle(m.r) + '"></span>' +
-           '<span><span style="display:block;font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">' + m.slot + '</span>' +
+           '<span><span style="display:block;font-size:11.5px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em">' + m.slot + (m.batch ? " · batch" : "") + '</span>' +
            '<h3 style="margin-top:4px">' + esc(m.r.title) + '</h3>' +
-           '<span class="t">' + mins(m.r.mins) + ' · serves ' + m.serves + '</span></span></button>';
+           '<span class="t">' + (m.batch
+             ? m.serves + " portion" + (m.serves === 1 ? "" : "s") + " · reheat"
+             : mins(m.r.mins) + " · serves " + m.serves) + '</span></span></button>';
     });
     // Carry the count the meal was planned for. Home already prints
     // "serves N" on the card above, so cooking it to the recipe's own
     // number instead would contradict the line the user just read.
-    const lead = meals[meals.length-1];
-    h += '<div style="padding:0 18px"><button class="btn full" data-cook="' + lead.r.id + '" data-serves="' + lead.serves + '">Start cooking</button></div></div>';
+    //
+    // A batch day is a reheat, not a cook, so the button follows the last
+    // meal today that is actually being cooked. When every meal today comes
+    // out of a pot cooked earlier, there is nothing to start.
+    const lead = meals.filter(m => !m.batch).pop();
+    h += '<div style="padding:0 18px">' + (lead
+      ? '<button class="btn full" data-cook="' + lead.r.id + '" data-serves="' + lead.serves + '">Start cooking</button>'
+      : '<button class="btn line full" data-open="' + meals[meals.length-1].r.id + '">Reheat from the batch</button>')
+      + '</div></div>';
   } else {
     h += '<div class="panel tight"><div class="ph"><h2>Cooking today</h2>' +
          '<button class="act" data-go="plan">Plan</button></div>' +
@@ -2200,7 +2255,7 @@ function renderDetail(){
     $("#confirmDel").onclick = () => {
       db.recipes = db.recipes.filter(x => x.id !== r.id);
       db.deleted[r.id] = Date.now();
-      Object.keys(db.plan).forEach(d => ["lunch","dinner"].forEach(sl => {
+      Object.keys(db.plan).forEach(d => SLOTS.forEach(sl => {
         if (db.plan[d] && db.plan[d][sl] && db.plan[d][sl].id === r.id){
           delete db.plan[d][sl]; db.planTs[d + "|" + sl] = Date.now();
         }
@@ -2400,6 +2455,9 @@ $("#cookNext").onclick = () => {
    PLAN
    ============================================================ */
 const DAYNAME = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+/* Reads inside a sentence ("from Saturday", "from today"), so today is
+   lower case while the weekday names keep their capital. */
+const dayName = d => d === todayISO() ? "today" : DAYNAME[new Date(d+"T12:00:00").getDay()];
 const weekDays = () => Array.from({length:7}, (_,i) => addDays(db.weekStart, i));
 
 /* The week only moved when you tapped Next week, so a shelf left alone for a
@@ -2442,9 +2500,31 @@ function renderPlan(){
       if (!v) return '<button class="slot empty" data-set="' + d + '|' + key + '">' +
         '<span class="pic">＋</span><span><span class="lbl">' + label + '</span>' +
         '<h4>Nothing yet</h4></span></button>';
+
+      // A batch day says how much it takes and where from; a cook that has
+      // days feeding off it says how much of it is spoken for. Both warn
+      // when the sums don't work — more portions claimed than were made, or
+      // a batch day whose pot is no longer planned at all.
+      let lbl = label, sub = "", warn = false;
+      if (v.batch){
+        const src = batchSource(d, v.id);
+        lbl = label + " · BATCH";
+        warn = !src;
+        sub = (v.serves || 0) + " portion" + ((v.serves||0) === 1 ? "" : "s") +
+              (src ? " · from " + dayName(src.day) : " · nothing cooking this week");
+      } else {
+        const claimed = batchClaimed(d, v.id);
+        if (claimed){
+          warn = claimed > v.serves;
+          sub = "Batch of " + v.serves + " · " + claimed + " planned from it";
+        }
+      }
+
       return '<div class="slot"><button data-set="' + d + '|' + key + '" style="display:flex;gap:11px;align-items:center;flex:1;text-align:left">' +
-        '<span class="pic" style="' + picStyle(r || {title:v.title}) + '"></span>' +
-        '<span><span class="lbl">' + label + '</span><h4>' + esc(v.title) + '</h4></span></button>' +
+        '<span class="pic" style="' + picStyle(r || {title:v.title}) + (v.batch ? ';opacity:.5' : '') + '"></span>' +
+        '<span><span class="lbl">' + lbl + '</span><h4>' + esc(v.title) + '</h4>' +
+        (sub ? '<span class="sub' + (warn ? " over" : "") + '">' + esc(sub) + '</span>' : "") +
+        '</span></button>' +
         '<button class="x" data-clear="' + d + '|' + key + '" aria-label="Remove">✕</button></div>';
     };
     return '<div class="panel tight"><div class="dayhead' + (d===today?" today":"") + '" style="padding-top:2px">' +
@@ -2464,7 +2544,7 @@ function renderPlan(){
   $("#planBack").onclick = () => { weekPinned = true; weekPinDir = -1; db.weekStart = addDays(db.weekStart, -7); save(); renderPlan(); toast("Showing last week"); };
   $("#planShift").onclick = () => { weekPinned = true; weekPinDir = 1; db.weekStart = addDays(db.weekStart, 7); save(); renderPlan(); toast("Showing next week"); };
   $("#planClear").onclick = () => {
-    weekDays().forEach(d => { ["lunch","dinner"].forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
+    weekDays().forEach(d => { SLOTS.forEach(sl => { if (db.plan[d]) delete db.plan[d][sl]; db.planTs[d+"|"+sl] = Date.now(); }); });
     save(); renderPlan(); toast("Week cleared");
   };
 }
@@ -2490,12 +2570,63 @@ function pickRecipeFor(day, slot){
   onSheetPick("[data-pick]", b => {
     const r = db.recipes.find(x => x.id === b.dataset.pick);
     if (!r) return closeSheet();
-    db.plan[day] = db.plan[day] || {};
-    db.plan[day][slot] = { id: r.id, title: r.title, serves: r.serves };
-    db.planTs[day + "|" + slot] = Date.now();
-    save(); closeSheet(); renderPlan();
-    toast("Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()]);
+    // Only ask when the question means anything: the same dish is already
+    // being cooked this week, somewhere other than the slot being filled.
+    const src = batchSource(day, r.id);
+    if (src && !(src.day === day && src.slot === slot)) return askBatch(day, slot, r, src);
+    setPlanEntry(day, slot, r, null);
   });
+}
+
+/* portions === null plans a cook; a number plans a day eating that many
+   portions of one. */
+function setPlanEntry(day, slot, r, portions){
+  db.plan[day] = db.plan[day] || {};
+  const entry = { id: r.id, title: r.title, serves: portions === null ? r.serves : portions };
+  if (portions !== null) entry.batch = true;
+  db.plan[day][slot] = entry;
+  db.planTs[day + "|" + slot] = Date.now();
+  save(); closeSheet(); renderPlan();
+  toast(portions === null
+    ? "Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()]
+    : portions + " portion" + (portions === 1 ? "" : "s") + " from the batch");
+}
+
+function askBatch(day, slot, r, src){
+  const from = dayName(src.day);
+  openSheet(r.title,
+    '<p class="muted" style="margin-top:-6px">This is already being cooked ' + esc(from === "today" ? "today" : "on " + from) + '.</p>' +
+    '<button class="btn full" id="bFresh" style="margin-top:16px">Cook it fresh</button>' +
+    '<button class="btn line full" id="bBatch" style="margin-top:10px">Eat from that batch</button>');
+  $("#bFresh").onclick = () => setPlanEntry(day, slot, r, null);
+  $("#bBatch").onclick = () => askPortions(day, slot, r, src);
+}
+
+/* The batch's arithmetic is shown at the moment you are deciding, which is
+   the only point where it can still change your mind. */
+function askPortions(day, slot, r, src){
+  const made = src.serves || 0;
+  const already = batchClaimed(src.day, r.id);
+  let n = Math.min(2, Math.max(1, made - already)) || 1;
+  const draw = () => {
+    const left = made - already - n;
+    openSheet("How much of the batch?",
+      '<p class="muted" style="margin-top:-6px">' + esc(dayName(src.day)) + "’s batch makes " + made +
+        (already ? ", with " + already + " already planned from it" : "") + '.</p>' +
+      '<div class="scaler" style="padding:18px 0 12px">' +
+        '<button id="bMinus" aria-label="Fewer portions">−</button>' +
+        '<span class="val">' + n + " PORTION" + (n === 1 ? "" : "S") + '</span>' +
+        '<button id="bPlus" aria-label="More portions">+</button></div>' +
+      '<p class="help"' + (left < 0 ? ' style="color:var(--red)"' : "") + '>' +
+        (left < 0 ? "That is " + (-left) + " more than the batch makes."
+                  : left + " portion" + (left === 1 ? "" : "s") + " left after this.") + '</p>' +
+      '<button class="btn full" id="bOk" style="margin-top:18px">Add to ' +
+        esc(dayName(day)) + " " + esc(slot) + '</button>');
+    $("#bMinus").onclick = () => { n = Math.max(1, n - 1); draw(); };
+    $("#bPlus").onclick  = () => { n = Math.min(24, n + 1); draw(); };
+    $("#bOk").onclick    = () => setPlanEntry(day, slot, r, n);
+  };
+  draw();
 }
 
 function pickDay(recipeId){

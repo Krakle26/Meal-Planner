@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13b";
+const BUILD = "2026-09-13c";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -2355,8 +2355,15 @@ function renderCook(){
     '<div class="txt">' + esc(text) + '</div>' +
     // The count is spelled out here rather than in the top bar, which
     // ellipsises a long title and would hide it.
+    // The note comes too. parseIngredient splits a line at the first comma
+    // past a third of the way in, so "olive oil (1 tbsp), for frying" is
+    // stored as name plus note — and printing only the name here left the
+    // line looking truncated against the same row on the detail screen.
+    // Greyed the way the detail screen greys it, so the amount still leads.
     (needs.length ? '<div class="need"><span>To hand · serves ' + cookServes + '</span>' + needs.map(i =>
-      '<p>' + esc((i.qty!==null&&i.qty!==undefined ? fmtNum(i.qty*k) + (i.unit?" "+i.unit:"") + " " : "") + i.name) + '</p>').join("") + '</div>' : "");
+      '<p>' + esc((i.qty!==null&&i.qty!==undefined ? fmtNum(i.qty*k) + (i.unit?" "+i.unit:"") + " " : "") + i.name) +
+      (i.note ? '<span style="color:var(--muted);font-weight:500">, ' + esc(i.note) + '</span>' : "") +
+      '</p>').join("") + '</div>' : "");
   $("#cookTimerWrap").innerHTML = secs
     ? '<button class="timerbtn" id="tBtn">▷ Start ' + (secs >= 60 ? Math.round(secs/60) + " min" : secs + " sec") + ' timer</button>' : "";
   if (secs) $("#tBtn").onclick = () => runTimer(secs);

@@ -521,7 +521,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13g";
+const BUILD = "2026-09-13h";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -3341,18 +3341,27 @@ $("#parseRaw").onclick = () => {
 async function fetchPage(url, onTry){
   const tried = [];
 
-  // 1. Your own Netlify function. Best route: nothing third-party sees it.
+  // 1. Your own function, on a host that runs server code. Best route when
+  //    it exists: no relay operator sees the recipe address.
+  //
+  //    On GitHub Pages nothing runs it, so this 404s and we move on. That is
+  //    the expected path here rather than a fault, so it is neither announced
+  //    while it happens nor listed among the reasons a link failed — saying
+  //    "your fetcher: not deployed" to someone who never deployed one is
+  //    noise on the one screen they are already reading for a reason.
+  //
+  //    Any other answer does mean a deployed fetcher is misbehaving, and
+  //    that is worth saying.
   try {
-    onTry && onTry("Trying your own fetcher…");
     const res = await fetch("/.netlify/functions/fetch-recipe?url=" + encodeURIComponent(url));
     if (res.ok){
       const j = await res.json();
       if (j.html) return { html: j.html, via: "your own fetcher" };
       tried.push("your fetcher: " + (j.error || "empty reply"));
-    } else {
-      tried.push("your fetcher: " + (res.status === 404 ? "not deployed" : "error " + res.status));
+    } else if (res.status !== 404){
+      tried.push("your fetcher: error " + res.status);
     }
-  } catch(e){ tried.push("your fetcher: unreachable"); }
+  } catch(e){ /* offline, or blocked — the relays below report that themselves */ }
 
   // 2. Public relays, in order of how much of the page they preserve.
   //    HTML keeps the structured recipe data; markdown is the last resort.

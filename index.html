@@ -521,7 +521,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13f";
+const BUILD = "2026-09-13g";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -2268,6 +2268,12 @@ function renderDetail(){
   if (!r) return go(detailFrom);
   const k = detailServes / r.serves;
 
+  // Is today a day that eats this out of a pot cooked earlier? A cook of the
+  // same dish today wins — then there really is something to cook.
+  const mine = SLOTS.map(sl => (db.plan[todayISO()] || {})[sl]).filter(e => e && e.id === r.id);
+  const batchToday = mine.some(e => !e.batch) ? null : mine.find(e => e.batch);
+  const batchSrc = batchToday ? batchSource(todayISO(), r.id) : null;
+
   let body = "";
   if (detailTab === "ing"){
     body = '<div class="panel tight">' +
@@ -2305,7 +2311,18 @@ function renderDetail(){
     '</div>' +
     body +
     '<div class="panel pad">' +
-      '<button class="btn full" id="dCook">Start cooking</button>' +
+      // Offering "Start cooking" on a day you are only reheating was the one
+      // place the plan's batch labelling didn't reach. Rather than plumb the
+      // day you arrived from through every data-open on four screens, read
+      // it off today's plan — which is the only day whose answer matters,
+      // and cannot fall out of step with what Home and Plan are showing.
+      (batchToday
+        ? '<div class="status" style="margin:0 0 12px">Today this is ' + batchToday.serves +
+            ' portion' + (batchToday.serves === 1 ? "" : "s") +
+            (batchSrc ? " from " + esc(dayName(batchSrc.day)) + "’s batch" : " from a batch") +
+            '. Nothing to cook.</div>' +
+          '<button class="btn line full" id="dCook">Cook it from scratch</button>'
+        : '<button class="btn full" id="dCook">Start cooking</button>') +
       '<div class="row" style="margin-top:10px"><button class="btn line" id="dPlan" style="flex:1">Add to plan</button>' +
       '<button class="btn line" id="dLeft" style="flex:1">Log leftovers</button></div>' +
       '<div class="row" style="margin-top:10px">' +

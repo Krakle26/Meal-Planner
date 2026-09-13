@@ -517,7 +517,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-05a";
+const BUILD = "2026-09-13b";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1906,7 +1906,11 @@ function renderHome(){
            '<h3 style="margin-top:4px">' + esc(m.r.title) + '</h3>' +
            '<span class="t">' + mins(m.r.mins) + ' · serves ' + m.serves + '</span></span></button>';
     });
-    h += '<div style="padding:0 18px"><button class="btn full" data-cook="' + meals[meals.length-1].r.id + '">Start cooking</button></div></div>';
+    // Carry the count the meal was planned for. Home already prints
+    // "serves N" on the card above, so cooking it to the recipe's own
+    // number instead would contradict the line the user just read.
+    const lead = meals[meals.length-1];
+    h += '<div style="padding:0 18px"><button class="btn full" data-cook="' + lead.r.id + '" data-serves="' + lead.serves + '">Start cooking</button></div></div>';
   } else {
     h += '<div class="panel tight"><div class="ph"><h2>Cooking today</h2>' +
          '<button class="act" data-go="plan">Plan</button></div>' +
@@ -2167,7 +2171,7 @@ function renderDetail(){
   if (est) est.onclick = () => estimateNutrition(r);
 
   $("#dBack").onclick = () => go(detailFrom);
-  $("#dCook").onclick = () => startCook(r.id);
+  $("#dCook").onclick = () => startCook(r.id, detailServes);
   $("#dFav").onclick = () => { r.fav = !r.fav; touch(r); save(); renderDetail(); toast(r.fav ? "Favourited" : "Removed from favourites"); };
   $("#dPlan").onclick = () => pickDay(r.id);
   $("#dLeft").onclick = () => logLeftovers(r);
@@ -2309,16 +2313,24 @@ document.addEventListener("click", e => {
   const nav = e.target.closest("[data-go]");
   if (nav) return go(nav.dataset.go);
   const ck = e.target.closest("[data-cook]");
-  if (ck) return startCook(ck.dataset.cook);
+  if (ck) return startCook(ck.dataset.cook, ck.dataset.serves);
 });
 
 /* ============================================================
    COOK MODE
    ============================================================ */
-let cookR = null, cookI = 0, wakeLock = null, tHandle = null, tEnd = 0;
+let cookR = null, cookI = 0, cookServes = 0, wakeLock = null, tHandle = null, tEnd = 0;
 
-async function startCook(id){
+/* Cook mode showed the recipe's own quantities whatever you had scaled it
+   to on the detail screen, so a tray scaled to six was cooked to the
+   amounts for four — and the number you were reading while cooking was the
+   one place being wrong about it. The serving count travels with the recipe
+   into cook mode now: the scaled figure from the detail screen, or the
+   planned count when it starts from Home. Anything unreadable falls back to
+   the recipe's own count, which is what it always used. */
+async function startCook(id, serves){
   cookR = db.recipes.find(x => x.id === id); if (!cookR || !cookR.steps.length) return toast("No steps to follow");
+  cookServes = Math.max(1, parseInt(serves) || cookR.serves);
   cookI = 0;
   $("#cook").classList.add("on");
   $("#cookName").textContent = cookR.title;
@@ -2335,13 +2347,16 @@ function renderCook(){
   const text = cookR.steps[cookI];
   const needs = stepNeeds(cookR, text);
   const secs = stepSeconds(text);
+  const k = cookServes / cookR.serves;
 
   $("#cookPips").innerHTML = cookR.steps.map((_,i) => '<i class="' + (i <= cookI ? "on" : "") + '"></i>').join("");
   $("#cookCard").innerHTML =
     '<div class="n">Step ' + (cookI+1) + ' of ' + total + '</div>' +
     '<div class="txt">' + esc(text) + '</div>' +
-    (needs.length ? '<div class="need"><span>To hand</span>' + needs.map(i =>
-      '<p>' + esc((i.qty!==null&&i.qty!==undefined ? fmtNum(i.qty) + (i.unit?" "+i.unit:"") + " " : "") + i.name) + '</p>').join("") + '</div>' : "");
+    // The count is spelled out here rather than in the top bar, which
+    // ellipsises a long title and would hide it.
+    (needs.length ? '<div class="need"><span>To hand · serves ' + cookServes + '</span>' + needs.map(i =>
+      '<p>' + esc((i.qty!==null&&i.qty!==undefined ? fmtNum(i.qty*k) + (i.unit?" "+i.unit:"") + " " : "") + i.name) + '</p>').join("") + '</div>' : "");
   $("#cookTimerWrap").innerHTML = secs
     ? '<button class="timerbtn" id="tBtn">▷ Start ' + (secs >= 60 ? Math.round(secs/60) + " min" : secs + " sec") + ' timer</button>' : "";
   if (secs) $("#tBtn").onclick = () => runTimer(secs);

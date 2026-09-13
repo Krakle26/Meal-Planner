@@ -519,7 +519,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13d";
+const BUILD = "2026-09-13e";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1344,6 +1344,7 @@ function normaliseRecipe(r){
   r.fav = !!r.fav;
   if (typeof r.image !== "string") r.image = "";
   if (typeof r.source !== "string") r.source = "";
+  r.lastCooked = Number(r.lastCooked) || 0;
   if (!r.added) r.added = Date.now();
   // Older recipes predate change tracking; treat them as last touched when added.
   if (!r.updated) r.updated = r.added;
@@ -1911,6 +1912,93 @@ function leftoverMatches(){
     .sort((a,b) => b.hits.length - a.hits.length || (b.r.fav?1:0)-(a.r.fav?1:0) || a.r.mins - b.r.mins);
 }
 
+/* ---- inspire me ----
+   A flat random pick is no use: it offers back the thing you cooked on
+   Tuesday as readily as the thing you have been meaning to use up. These
+   weights lean it toward what the fridge needs and away from what is
+   already planned or was cooked lately — but nothing is ever ruled out, so
+   the whole shelf stays reachable and a small shelf still answers. */
+function inspirePool(exclude){
+  const planned = new Set();
+  weekDays().forEach(d => SLOTS.forEach(sl => {
+    const e = (db.plan[d] || {})[sl];
+    if (e) planned.add(e.id);
+  }));
+  const hits = {};
+  leftoverMatches().forEach(m => { hits[m.r.id] = m.hits; });
+  const now = Date.now();
+
+  return visibleRecipes().filter(r => r.id !== exclude).map(r => {
+    let w = 1;
+    const used = hits[r.id];
+    if (used) w *= 1 + 2 * Math.min(3, used.length);   // the fridge comes first
+    if (planned.has(r.id)) w *= 0.15;                  // already on the plan
+    if (r.fav) w *= 1.4;
+    // Cooked today is worth a fifth of cooked a fortnight ago; older than
+    // that carries no penalty at all.
+    const days = r.lastCooked ? (now - r.lastCooked) / 86400000 : 999;
+    if (days < 14) w *= 0.2 + 0.8 * (days / 14);
+    return { r, w, used: used || [] };
+  });
+}
+
+function inspirePick(exclude){
+  let pool = inspirePool(exclude);
+  // Excluding the last suggestion empties a one-recipe shelf; better to
+  // offer it again than to answer with nothing.
+  if (!pool.length && exclude) pool = inspirePool(null);
+  if (!pool.length) return null;
+  let t = Math.random() * pool.reduce((s,x) => s + x.w, 0);
+  for (const x of pool){ t -= x.w; if (t <= 0) return x; }
+  return pool[pool.length - 1];
+}
+
+/* Say why this one, so a suggestion reads as a reason rather than a dice
+   roll — and stay quiet when there is no honest reason to give. */
+function inspireWhy(r, used){
+  if (used.length) return "Uses your " + used.slice(0,2).map(u => String(u).replace(/^\d+\s*/,"")).join(" and ");
+  if (!r.lastCooked) return "You have not cooked this one yet";
+  const days = Math.round((Date.now() - r.lastCooked) / 86400000);
+  if (days >= 21) return "Not cooked in " + (days >= 60 ? "months" : days + " days");
+  if (r.fav) return "One of your favourites";
+  return "";
+}
+
+function showInspire(exclude){
+  const pick = inspirePick(exclude);
+  if (!pick){
+    openSheet("Inspire me",
+      '<p class="muted" style="margin-top:-6px">Nothing on the shelf to suggest yet. Add a recipe and come back.</p>' +
+      '<button class="btn full" id="iClose" style="margin-top:16px">Close</button>');
+    $("#iClose").onclick = closeSheet;
+    return;
+  }
+  const r = pick.r, why = inspireWhy(r, pick.used);
+  openSheet("How about…",
+    '<div style="display:flex;gap:13px;align-items:center;margin:-2px 0 18px">' +
+      '<span class="pic" style="width:78px;height:78px;border-radius:14px;flex:0 0 auto;' + picStyle(r) + '"></span>' +
+      '<span><h3 style="font-size:17px;font-weight:700">' + esc(r.title) + '</h3>' +
+      '<span style="display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:5px">' +
+        mins(r.mins) + ' · serves ' + r.serves + '</span>' +
+      (why ? '<span style="display:block;font-size:12.5px;color:var(--green);font-weight:700;margin-top:4px">' + esc(why) + '</span>' : "") +
+    '</span></div>' +
+    '<button class="btn full" id="iPlan">Put it on today</button>' +
+    '<button class="btn line full" id="iAgain" style="margin-top:10px">Show me another</button>' +
+    '<button class="btn ghost full" id="iOpen" style="margin-top:10px">Open the recipe</button>');
+
+  $("#iAgain").onclick = () => showInspire(r.id);
+  $("#iOpen").onclick = () => { closeSheet(); openRecipe(r.id); };
+  $("#iPlan").onclick = () => {
+    const t = todayISO(), day = db.plan[t] || {};
+    const slot = !day.dinner ? "dinner" : (!day.lunch ? "lunch" : "dinner");
+    // Suggesting something already cooking this week is unlikely but
+    // allowed, so route it through the same batch question the plan asks.
+    const src = batchSource(t, r.id);
+    if (src && !(src.day === t && src.slot === slot)) return askBatch(t, slot, r, src);
+    setPlanEntry(t, slot, r, null);
+  };
+}
+
 function todaysMeals(){
   const day = db.plan[todayISO()] || {};
   return SLOTS.map(slot => {
@@ -1964,12 +2052,14 @@ function renderHome(){
     const lead = meals.filter(m => !m.batch).pop();
     h += '<div style="padding:0 18px">' + (lead
       ? '<button class="btn full" data-cook="' + lead.r.id + '" data-serves="' + lead.serves + '">Start cooking</button>'
-      : '<button class="btn line full" data-open="' + meals[meals.length-1].r.id + '">Reheat from the batch</button>')
+      : '<button class="btn line full" data-open="' + meals[meals.length-1].r.id + '">Reheat from the batch</button>') +
+      '<button class="btn line full" id="inspire" style="margin-top:10px">Inspire me</button>'
       + '</div></div>';
   } else {
     h += '<div class="panel tight"><div class="ph"><h2>Cooking today</h2>' +
          '<button class="act" data-go="plan">Plan</button></div>' +
-         '<div class="empty"><strong>Nothing planned</strong>Put something on today and it shows up here.</div></div>';
+         '<div class="empty"><strong>Nothing planned</strong>Put something on today and it shows up here.</div>' +
+         '<div style="padding:0 18px"><button class="btn full" id="inspire">Inspire me</button></div></div>';
   }
 
   if (matches.length){
@@ -2002,6 +2092,7 @@ function renderHome(){
        '</div></div>';
 
   $("#s-home").innerHTML = h;
+  $("#inspire").onclick = () => showInspire(null);
 }
 
 /* ============================================================
@@ -2387,6 +2478,11 @@ async function startCook(id, serves){
   cookR = db.recipes.find(x => x.id === id); if (!cookR || !cookR.steps.length) return toast("No steps to follow");
   cookServes = Math.max(1, parseInt(serves) || cookR.serves);
   cookI = 0;
+  // Stamped on opening rather than on finishing: opening cook mode is
+  // the honest signal that you cooked it, and plenty of cooks never tap
+  // through the final step. Inspire me reads this to stop offering back
+  // what you ate last night.
+  cookR.lastCooked = Date.now(); touch(cookR); save();
   $("#cook").classList.add("on");
   $("#cookName").textContent = cookR.title;
   renderCook();
@@ -2586,7 +2682,10 @@ function setPlanEntry(day, slot, r, portions){
   if (portions !== null) entry.batch = true;
   db.plan[day][slot] = entry;
   db.planTs[day + "|" + slot] = Date.now();
-  save(); closeSheet(); renderPlan();
+  // renderRecipes rather than renderPlan: a slot can now be filled from
+  // Home as well as from the plan, and the screen you are on is the one
+  // that has to catch up.
+  save(); closeSheet(); renderRecipes();
   toast(portions === null
     ? "Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()]
     : portions + " portion" + (portions === 1 ? "" : "s") + " from the batch");

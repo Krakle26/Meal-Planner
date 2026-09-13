@@ -250,6 +250,8 @@ label.field>span{display:block;font-size:13px;font-weight:600;color:var(--muted)
 .slot h4{font-size:14.5px;font-weight:600;margin-top:3px}
 .slot.empty .pic{background:var(--page);border:1.5px dashed var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--line-2);font-size:20px}
 .slot.empty h4{color:var(--muted);font-weight:500}
+.addslot{display:block;width:100%;text-align:left;padding:2px 18px 4px;font-size:12.5px;font-weight:600;color:var(--muted)}
+.addslot:active{color:var(--orange)}
 .slot .sub{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px}
 .slot .sub.over{color:var(--red)}
 .slot .x{margin-left:auto;color:var(--muted);font-size:17px;padding:6px}
@@ -519,7 +521,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13e";
+const BUILD = "2026-09-13f";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1663,8 +1665,15 @@ function stepSeconds(text){
 
 
 /* The meals a day holds. Named once so the batch helpers below and every
-   walk of the plan agree on it. */
-const SLOTS = ["lunch","dinner"];
+   walk of the plan agree on it. Dessert is a real slot — it shops, batches
+   and syncs like the others — but the plan only draws a row for it on days
+   that have one, since most days don't. */
+const SLOTS = ["lunch","dinner","dessert"];
+
+/* Puddings sort to the top of the dessert picker and are what "Add to plan"
+   treats as a dessert. The seed shelf tags them "pudding"; "dessert" is
+   accepted too, since an imported recipe may well use it. */
+const isPudding = r => (r.tags || []).some(t => t === "pudding" || t === "dessert");
 
 /* ---- batch cooking ----
    One pot on Saturday, eaten again on Tuesday. A day eating from a batch
@@ -1990,7 +1999,8 @@ function showInspire(exclude){
   $("#iOpen").onclick = () => { closeSheet(); openRecipe(r.id); };
   $("#iPlan").onclick = () => {
     const t = todayISO(), day = db.plan[t] || {};
-    const slot = !day.dinner ? "dinner" : (!day.lunch ? "lunch" : "dinner");
+    const slot = isPudding(r) ? "dessert"
+               : !day.dinner ? "dinner" : (!day.lunch ? "lunch" : "dinner");
     // Suggesting something already cooking this week is unlikely but
     // allowed, so route it through the same batch question the plan asks.
     const src = batchSource(t, r.id);
@@ -2049,7 +2059,10 @@ function renderHome(){
     // A batch day is a reheat, not a cook, so the button follows the last
     // meal today that is actually being cooked. When every meal today comes
     // out of a pot cooked earlier, there is nothing to start.
-    const lead = meals.filter(m => !m.batch).pop();
+    // Dessert sorts last, so the plain "last cookable meal" would start the
+    // pudding rather than the dinner. It only leads when it is all there is.
+    const cookable = meals.filter(m => !m.batch);
+    const lead = cookable.filter(m => m.slot !== "dessert").pop() || cookable.pop();
     h += '<div style="padding:0 18px">' + (lead
       ? '<button class="btn full" data-cook="' + lead.r.id + '" data-serves="' + lead.serves + '">Start cooking</button>'
       : '<button class="btn line full" data-open="' + meals[meals.length-1].r.id + '">Reheat from the batch</button>') +
@@ -2626,7 +2639,10 @@ function renderPlan(){
     return '<div class="panel tight"><div class="dayhead' + (d===today?" today":"") + '" style="padding-top:2px">' +
       '<h3>' + (d===today ? "Today" : DAYNAME[dt.getDay()]) + '</h3>' +
       '<span class="d">' + dt.getDate() + " " + dt.toLocaleString("en-GB",{month:"short"}) + '</span></div>' +
-      slot("lunch","Lunch") + slot("dinner","Dinner") + '</div>';
+      slot("lunch","Lunch") + slot("dinner","Dinner") +
+      (day.dessert ? slot("dessert","Dessert")
+                   : '<button class="addslot" data-set="' + d + '|dessert">+ Dessert</button>') +
+      '</div>';
   }).join("");
 
   h += '<div class="panel pad"><div class="row">' +
@@ -2659,7 +2675,12 @@ $("#s-plan").addEventListener("click", e => {
 });
 
 function pickRecipeFor(day, slot){
-  const list = visibleRecipes().sort((a,b) => (b.fav?1:0)-(a.fav?1:0) || a.title.localeCompare(b.title));
+  // Floated, not filtered — plenty of things get eaten as a pudding without
+  // being tagged as one, and the rest of the shelf stays right there.
+  const pud = slot === "dessert";
+  const list = visibleRecipes().sort((a,b) =>
+    (pud ? (isPudding(b)?1:0)-(isPudding(a)?1:0) : 0) ||
+    (b.fav?1:0)-(a.fav?1:0) || a.title.localeCompare(b.title));
   if (!list.length){ toast("Add a recipe first"); return go("add"); }
   openSheet("Pick a recipe",
     list.map(r => '<button class="pick" data-pick="' + r.id + '"><span>' + (r.fav?"★ ":"") + esc(r.title) + '</span><span class="tag2">' + mins(r.mins) + '</span></button>').join(""));
@@ -2740,8 +2761,9 @@ function pickDay(recipeId){
   onSheetPick("[data-day]", b => {
     const d = b.dataset.day;
     db.plan[d] = db.plan[d] || {};
-    db.plan[d].dinner = { id: r.id, title: r.title, serves: r.serves };
-    db.planTs[d + "|dinner"] = Date.now();
+    const sl = isPudding(r) ? "dessert" : "dinner";
+    db.plan[d][sl] = { id: r.id, title: r.title, serves: r.serves };
+    db.planTs[d + "|" + sl] = Date.now();
     save(); closeSheet();
     toast("Planned for " + (d===todayISO() ? "today" : DAYNAME[new Date(d+"T12:00:00").getDay()]));
   });

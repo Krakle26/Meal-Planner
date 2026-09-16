@@ -521,7 +521,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-13h";
+const BUILD = "2026-09-16a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -2003,9 +2003,7 @@ function showInspire(exclude){
                : !day.dinner ? "dinner" : (!day.lunch ? "lunch" : "dinner");
     // Suggesting something already cooking this week is unlikely but
     // allowed, so route it through the same batch question the plan asks.
-    const src = batchSource(t, r.id);
-    if (src && !(src.day === t && src.slot === slot)) return askBatch(t, slot, r, src);
-    setPlanEntry(t, slot, r, null);
+    planInto(t, slot, r);
   };
 }
 
@@ -2640,10 +2638,12 @@ function renderPlan(){
               (src ? " · from " + dayName(src.day) : " · nothing cooking this week");
       } else {
         const claimed = batchClaimed(d, v.id);
-        if (claimed){
-          warn = claimed > v.serves;
-          sub = "Batch of " + v.serves + " · " + claimed + " planned from it";
-        }
+        warn = claimed > v.serves;
+        // Serving count was settable nowhere and shown nowhere; a plain cook
+        // says what it is set to, and only mentions the batch once something
+        // is actually eating from it.
+        sub = claimed ? "Batch of " + v.serves + " · " + claimed + " planned from it"
+                      : "Serves " + v.serves;
       }
 
       return '<div class="slot"><button data-set="' + d + '|' + key + '" style="display:flex;gap:11px;align-items:center;flex:1;text-align:left">' +
@@ -2704,29 +2704,36 @@ function pickRecipeFor(day, slot){
   onSheetPick("[data-pick]", b => {
     const r = db.recipes.find(x => x.id === b.dataset.pick);
     if (!r) return closeSheet();
-    // Only ask when the question means anything: the same dish is already
-    // being cooked this week, somewhere other than the slot being filled.
-    const src = batchSource(day, r.id);
-    if (src && !(src.day === day && src.slot === slot)) return askBatch(day, slot, r, src);
-    setPlanEntry(day, slot, r, null);
+    planInto(day, slot, r);
   });
 }
 
 /* portions === null plans a cook; a number plans a day eating that many
    portions of one. */
-function setPlanEntry(day, slot, r, portions){
+function setPlanEntry(day, slot, r, portions, batch){
   db.plan[day] = db.plan[day] || {};
   const entry = { id: r.id, title: r.title, serves: portions === null ? r.serves : portions };
-  if (portions !== null) entry.batch = true;
+  // A portion count no longer implies a batch day — a cook carries one too.
+  if (batch) entry.batch = true;
   db.plan[day][slot] = entry;
   db.planTs[day + "|" + slot] = Date.now();
   // renderRecipes rather than renderPlan: a slot can now be filled from
   // Home as well as from the plan, and the screen you are on is the one
   // that has to catch up.
   save(); closeSheet(); renderRecipes();
-  toast(portions === null
-    ? "Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()]
-    : portions + " portion" + (portions === 1 ? "" : "s") + " from the batch");
+  toast(batch
+    ? entry.serves + " portion" + (entry.serves === 1 ? "" : "s") + " from the batch"
+    : "Added to " + DAYNAME[new Date(day+"T12:00:00").getDay()] + " · serves " + entry.serves);
+}
+
+/* Every route into a plan slot lands here — the Plan screen, Add to plan on a
+   recipe, and Inspire me — so all three ask the same questions in the same
+   order. The batch question only comes up when the dish is already cooking
+   that week somewhere other than the slot being filled. */
+function planInto(day, slot, r){
+  const src = batchSource(day, r.id);
+  if (src && !(src.day === day && src.slot === slot)) return askBatch(day, slot, r, src);
+  askPortions(day, slot, r, null);
 }
 
 function askBatch(day, slot, r, src){
@@ -2735,33 +2742,46 @@ function askBatch(day, slot, r, src){
     '<p class="muted" style="margin-top:-6px">This is already being cooked ' + esc(from === "today" ? "today" : "on " + from) + '.</p>' +
     '<button class="btn full" id="bFresh" style="margin-top:16px">Cook it fresh</button>' +
     '<button class="btn line full" id="bBatch" style="margin-top:10px">Eat from that batch</button>');
-  $("#bFresh").onclick = () => setPlanEntry(day, slot, r, null);
+  $("#bFresh").onclick = () => askPortions(day, slot, r, null);
   $("#bBatch").onclick = () => askPortions(day, slot, r, src);
 }
 
 /* The batch's arithmetic is shown at the moment you are deciding, which is
    the only point where it can still change your mind. */
+/* Portions, for both kinds of entry. A cook asks how many it is being made
+   for and opens at the recipe's own count, so the common answer is already
+   there and the step costs one tap. A batch day asks how much of an existing
+   pot it takes, and shows the arithmetic while you are deciding — which is
+   the only point where it can still change your mind. */
 function askPortions(day, slot, r, src){
-  const made = src.serves || 0;
-  const already = batchClaimed(src.day, r.id);
-  let n = Math.min(2, Math.max(1, made - already)) || 1;
+  const batch = !!src;
+  const made = batch ? (src.serves || 0) : 0;
+  const already = batch ? batchClaimed(src.day, r.id) : 0;
+  let n = batch ? (Math.min(2, Math.max(1, made - already)) || 1)
+                : Math.max(1, r.serves || 4);
+  const word = batch ? "PORTION" : "SERVING";
   const draw = () => {
     const left = made - already - n;
-    openSheet("How much of the batch?",
-      '<p class="muted" style="margin-top:-6px">' + esc(dayName(src.day)) + "’s batch makes " + made +
-        (already ? ", with " + already + " already planned from it" : "") + '.</p>' +
+    openSheet(batch ? "How much of the batch?" : "How many is it for?",
+      '<p class="muted" style="margin-top:-6px">' + (batch
+        ? esc(dayName(src.day)) + "’s batch makes " + made +
+          (already ? ", with " + already + " already planned from it" : "") + "."
+        : esc(r.title) + " serves " + r.serves + " as written. The shopping list scales to whatever you set here."
+      ) + '</p>' +
       '<div class="scaler" style="padding:18px 0 12px">' +
         '<button id="bMinus" aria-label="Fewer portions">−</button>' +
-        '<span class="val">' + n + " PORTION" + (n === 1 ? "" : "S") + '</span>' +
+        '<span class="val">' + n + " " + word + (n === 1 ? "" : "S") + '</span>' +
         '<button id="bPlus" aria-label="More portions">+</button></div>' +
-      '<p class="help"' + (left < 0 ? ' style="color:var(--red)"' : "") + '>' +
-        (left < 0 ? "That is " + (-left) + " more than the batch makes."
-                  : left + " portion" + (left === 1 ? "" : "s") + " left after this.") + '</p>' +
+      (batch
+        ? '<p class="help"' + (left < 0 ? ' style="color:var(--red)"' : "") + '>' +
+          (left < 0 ? "That is " + (-left) + " more than the batch makes."
+                    : left + " portion" + (left === 1 ? "" : "s") + " left after this.") + '</p>'
+        : "") +
       '<button class="btn full" id="bOk" style="margin-top:18px">Add to ' +
         esc(dayName(day)) + " " + esc(slot) + '</button>');
     $("#bMinus").onclick = () => { n = Math.max(1, n - 1); draw(); };
     $("#bPlus").onclick  = () => { n = Math.min(24, n + 1); draw(); };
-    $("#bOk").onclick    = () => setPlanEntry(day, slot, r, n);
+    $("#bOk").onclick    = () => setPlanEntry(day, slot, r, n, batch);
   };
   draw();
 }
@@ -2777,12 +2797,9 @@ function pickDay(recipeId){
     }).join(""));
   onSheetPick("[data-day]", b => {
     const d = b.dataset.day;
-    db.plan[d] = db.plan[d] || {};
-    const sl = isPudding(r) ? "dessert" : "dinner";
-    db.plan[d][sl] = { id: r.id, title: r.title, serves: r.serves };
-    db.planTs[d + "|" + sl] = Date.now();
-    save(); closeSheet();
-    toast("Planned for " + (d===todayISO() ? "today" : DAYNAME[new Date(d+"T12:00:00").getDay()]));
+    // Used to write the entry itself, which meant no portions step and no
+    // batch question — the one way into a slot that asked nothing.
+    planInto(d, isPudding(r) ? "dessert" : "dinner", r);
   });
 }
 

@@ -284,7 +284,7 @@ label.field>span{display:block;font-size:13px;font-weight:600;color:var(--muted)
 .pips{display:flex;gap:5px;padding:0 18px 14px}
 .pips i{flex:1;height:5px;border-radius:3px;background:#DEDEE2}
 .pips i.on{background:var(--orange)}
-.cookcard{background:var(--panel);border-radius:22px;margin:0 10px;padding:22px 20px;flex:1;display:flex;flex-direction:column;overflow-y:auto}
+.cookcard{background:var(--panel);border-radius:22px;margin:0 10px;padding:22px 20px;flex:1;display:flex;flex-direction:column;overflow-y:auto;overscroll-behavior:contain}
 .cookcard .n{font-size:13px;font-weight:800;color:var(--orange);letter-spacing:.04em;text-transform:uppercase}
 .cookcard .txt{font-size:22px;font-weight:600;line-height:1.36;margin-top:12px}
 .need{margin-top:auto;background:var(--page);border-radius:16px;padding:14px}
@@ -300,9 +300,16 @@ label.field>span{display:block;font-size:13px;font-weight:600;color:var(--muted)
 /* ---------- sheet & toast ---------- */
 .sheet{position:fixed;inset:0;z-index:150;display:none}
 .sheet.on{display:block}
-.sheet .scrim{position:absolute;inset:0;background:rgba(20,20,24,.45)}
+.sheet .scrim{position:absolute;inset:0;background:rgba(20,20,24,.45);touch-action:none}
+/* A scrolling list inside an overlay hands the rest of a swipe to the page
+   behind once it reaches either end, so the week plan slid about while you
+   were picking a recipe. contain stops that hand-off; the lock below stops
+   the page moving at all while an overlay is up, including from a drag that
+   starts on the dimmed area. Two classes rather than one so finishing cook
+   mode, which opens the leftovers sheet, can't unlock the page early. */
+html.lock-sheet, html.lock-sheet body, html.lock-cook, html.lock-cook body{overflow:hidden}
 .sheet .panel2{
-  position:absolute;left:0;right:0;bottom:0;max-height:84vh;overflow-y:auto;
+  position:absolute;left:0;right:0;bottom:0;max-height:84vh;overflow-y:auto;overscroll-behavior:contain;
   background:var(--panel);border-radius:24px 24px 0 0;
   padding:22px 18px calc(24px + env(safe-area-inset-bottom));
 }
@@ -521,7 +528,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-16a";
+const BUILD = "2026-09-23a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1779,8 +1786,13 @@ function openSheet(title, html){
   clearSheetPick();
   $("#sheetPanel").innerHTML = "<h3>" + esc(title) + "</h3>" + html;
   $("#sheet").classList.add("on");
+  document.documentElement.classList.add("lock-sheet");
 }
-function closeSheet(){ clearSheetPick(); $("#sheet").classList.remove("on"); }
+function closeSheet(){
+  clearSheetPick();
+  $("#sheet").classList.remove("on");
+  document.documentElement.classList.remove("lock-sheet");
+}
 $("#sheet .scrim").addEventListener("click", closeSheet);
 
 /* Recipes imported from links usually carry a photo. Typed ones don't, so
@@ -2512,12 +2524,14 @@ async function startCook(id, serves){
   // what you ate last night.
   cookR.lastCooked = Date.now(); touch(cookR); save();
   $("#cook").classList.add("on");
+  document.documentElement.classList.add("lock-cook");
   $("#cookName").textContent = cookR.title;
   renderCook();
   try { if ("wakeLock" in navigator) wakeLock = await navigator.wakeLock.request("screen"); } catch(e){}
 }
 function stopCook(){
   $("#cook").classList.remove("on");
+  document.documentElement.classList.remove("lock-cook");
   clearInterval(tHandle); tHandle = null;
   if (wakeLock){ try { wakeLock.release(); } catch(e){} wakeLock = null; }
 }

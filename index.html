@@ -314,6 +314,19 @@ html.lock-sheet, html.lock-sheet body, html.lock-cook, html.lock-cook body{overf
   padding:22px 18px calc(24px + env(safe-area-inset-bottom));
 }
 .sheet h3{font-size:20px;font-weight:800;margin-bottom:14px}
+/* The title row holds the close button and stays pinned while a long list
+   (the leftovers sheet, the recipe picker) scrolls under it — an X that
+   scrolled away with the list would be gone exactly when it was wanted.
+   It is pulled out to the panel's edges so its background covers the list
+   passing beneath. */
+.sheethead{position:sticky;top:-22px;z-index:1;display:flex;align-items:flex-start;gap:12px;
+  margin:-22px -18px 6px;padding:22px 18px 0;background:var(--panel)}
+/* Most sheets open with a line pulled up by -6px to sit under the title;
+   now the title row is pinned and opaque, that pull tucked the line's top
+   under it. The 6px here cancels it, so nothing starts beneath the row. */
+.sheethead h3{flex:1;min-width:0}
+.sheetx{flex:0 0 auto;width:32px;height:32px;margin-top:-2px;border-radius:50%;background:var(--page);
+  color:var(--muted);font-size:14px;display:flex;align-items:center;justify-content:center}
 .sheet .muted{color:var(--muted);font-size:14px}
 .pick{width:100%;text-align:left;padding:13px 0;border-bottom:1px solid var(--line);font-size:15px;display:flex;gap:10px;align-items:center;font-weight:600}
 .pick .tag2{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:600}
@@ -528,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-09-23a";
+const BUILD = "2026-10-20a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1784,7 +1797,9 @@ function onSheetPick(sel, fn){
 }
 function openSheet(title, html){
   clearSheetPick();
-  $("#sheetPanel").innerHTML = "<h3>" + esc(title) + "</h3>" + html;
+  $("#sheetPanel").innerHTML = '<div class="sheethead"><h3>' + esc(title) + '</h3>' +
+    '<button class="sheetx" id="sheetX" aria-label="Close">✕</button></div>' + html;
+  $("#sheetX").onclick = dismissSheet;
   $("#sheet").classList.add("on");
   document.documentElement.classList.add("lock-sheet");
 }
@@ -1793,7 +1808,12 @@ function closeSheet(){
   $("#sheet").classList.remove("on");
   document.documentElement.classList.remove("lock-sheet");
 }
-$("#sheet .scrim").addEventListener("click", closeSheet);
+/* Closing without choosing — the X or a tap on the dimmed area. A sheet can
+   change things before it is dismissed (each leftover tapped is saved as you
+   go), and only its own "done" button used to redraw the screen behind, so
+   leaving any other way left Home showing the fridge as it was before. */
+function dismissSheet(){ closeSheet(); renderRecipes(); }
+$("#sheet .scrim").addEventListener("click", dismissSheet);
 
 /* Recipes imported from links usually carry a photo. Typed ones don't, so
    they get a colour of their own instead — the same one on every screen and

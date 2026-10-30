@@ -541,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-10-20a";
+const BUILD = "2026-10-30a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -561,8 +561,12 @@ const Store = (() => {
 })();
 
 const uid = () => Math.random().toString(36).slice(2,10);
-const todayISO = () => new Date().toISOString().slice(0,10);
-const addDays = (iso,n) => { const d = new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+/* Dates are the phone's own calendar day. toISOString() gives the UTC date,
+   so between midnight and 1am in British Summer Time "today" was still
+   yesterday — and anywhere east of UTC it turned over in the evening. */
+const isoOf = d => d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+const todayISO = () => isoOf(new Date());
+const addDays = (iso,n) => { const d = new Date(iso+"T12:00:00"); d.setDate(d.getDate()+n); return isoOf(d); };
 
 /* The plan week runs Saturday to Friday, so the weekend sits at the front
    of it rather than being split across two windows — and the shopping list,
@@ -807,8 +811,11 @@ function domFrom(html){
 
 function durMins(d){
   if (!d) return 0;
-  const m = String(d).match(/P(?:T)?(?:(\d+)H)?(?:(\d+)M)?/);
-  return m ? (m[1]?parseInt(m[1])*60:0) + (m[2]?parseInt(m[2]):0) : 0;
+  // Many recipe plugins write a day part ("P0DT1H30M"). The old pattern
+  // stopped at the D, read nothing, and the recipe was saved as 30 minutes.
+  // T stays optional because some sites leave it out ("P1H30M").
+  const m = String(d).match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/);
+  return m ? (m[1]?parseInt(m[1])*1440:0) + (m[2]?parseInt(m[2])*60:0) + (m[3]?parseInt(m[3]):0) : 0;
 }
 
 /* ---- nutrition ----
@@ -1394,6 +1401,13 @@ function normaliseDb(d){
   // happened to roll on, so snap it. Aligning an already-aligned date is a
   // no-op, and a week moved by hand keeps its offset either way.
   d.weekStart = startOfWeek(d.weekStart || todayISO());
+  // Keep ticks for this week and last; anything older, or from before ticks
+  // were kept per week, is a finished shop. Dropping undated ticks rather
+  // than dating them into this week means a device still on an older build
+  // can't keep feeding last week's ticks back in through sync.
+  const keepFrom = addDays(d.weekStart, -7), dated = /^\d{4}-\d\d-\d\d\|/;
+  for (const m of [d.ticked, d.tickedTs])
+    for (const k of Object.keys(m)) if (!dated.test(k) || k.slice(0,10) < keepFrom) delete m[k];
   d.recipes = d.recipes.map(normaliseRecipe).filter(Boolean);
   return d;
 }
@@ -1596,9 +1610,12 @@ async function gistCreate(){
 async function gistRead(){
   const j = await gistCall("/gists/" + db.sync.gistId, { method: "GET" });
   const f = j.files && j.files[SYNC_FILE];
-  if (!f) throw new Error("Nothing stored there yet");
+  // A store with no file in it yet is genuinely empty, and safe to write
+  // into. Everything else that goes wrong here throws — see syncNow.
+  if (!f) return null;
   if (f.truncated && f.raw_url){
     const r = await fetch(f.raw_url);
+    if (!r.ok) throw new Error("Could not read the sync store (" + r.status + ")");
     return JSON.parse(await r.text());
   }
   return JSON.parse(f.content);
@@ -1629,7 +1646,11 @@ async function syncNow(quiet){
   clearTimeout(pushTimer);
   try {
     if (!quiet) toast("Syncing…");
-    const remote = await gistRead().catch(() => null);
+    // A read that fails has to stop the sync here. It used to be swallowed
+    // and the write went ahead regardless, replacing the shared copy with
+    // this device's shelf alone — deleting whatever only the other device
+    // had, which is the one thing sync exists to prevent.
+    const remote = await gistRead();
     if (remote){
       const { db: merged, stats } = mergeDb(db, remote);
       const sync = db.sync;
@@ -1675,12 +1696,16 @@ function stepNeeds(r, text){
   }).slice(0,5);
 }
 function stepSeconds(text){
-  const m = text.match(/(\d+)\s*(second|sec|minute|min|hour|hr)/i);
+  // Whole words only: "2 minced garlic" is not a two-minute step. And an
+  // hours figure takes the minutes straight after it, so "1 hour 30
+  // minutes" is ninety, not sixty.
+  const m = text.match(/(\d+)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\b/i);
   if (!m) return 0;
   const n = parseInt(m[1]), u = m[2].toLowerCase();
   if (u.startsWith("s")) return n;
-  if (u.startsWith("h")) return n*3600;
-  return n*60;
+  if (u.startsWith("m")) return n*60;
+  const more = text.slice(m.index + m[0].length).match(/^\s*(?:and\s+)?(\d+)\s*(?:minutes?|mins?)\b/i);
+  return n*3600 + (more ? parseInt(more[1])*60 : 0);
 }
 
 
@@ -1732,6 +1757,10 @@ function batchClaimed(cookDay, recipeId){
   }
   return n;
 }
+
+/* Ticks belong to one week's shop. Keyed by ingredient alone, onions ticked
+   this week came up ticked on next week's list too, and got skipped. */
+const tickKey = k => db.weekStart + "|" + k;
 
 function buildList(){
   const bag = {};
@@ -2854,7 +2883,7 @@ function renderShop(){
   const order = AISLES.map(a => a[0]).concat(["Everything else"]);
   const byAisle = {};
   items.forEach(i => { (byAisle[i.aisle] = byAisle[i.aisle] || []).push(i); });
-  const doneCount = items.filter(i => db.ticked[i.key]).length;
+  const doneCount = items.filter(i => db.ticked[tickKey(i.key)]).length;
 
   let h = '<div class="panel tight"><div class="ph"><h2>' + items.length + ' items</h2>' +
     '<button class="act go" id="shopCopy">Copy list</button></div>' +
@@ -2862,11 +2891,11 @@ function renderShop(){
 
   h += order.filter(a => byAisle[a]).map(a => {
     const rows = byAisle[a].sort((x,y) => x.name.localeCompare(y.name));
-    const done = rows.filter(i => db.ticked[i.key]).length;
+    const done = rows.filter(i => db.ticked[tickKey(i.key)]).length;
     return '<div class="panel tight"><div class="aisle" style="padding-top:2px"><h3>' + a + '</h3>' +
       '<span class="c">' + done + ' of ' + rows.length + '</span></div>' +
       rows.map(i => {
-        const isDone = !!db.ticked[i.key];
+        const isDone = !!db.ticked[tickKey(i.key)];
         const amt = i.hasQty ? fmtNum(i.qty) + (i.unit ? " " + i.unit : "") : "";
         return '<button class="buy' + (isDone?" done":"") + '" data-k="' + esc(i.key) + '">' +
           '<span class="box">✓</span><span class="nm">' + esc(i.name) + '</span>' +
@@ -2879,8 +2908,8 @@ function renderShop(){
 
   $("#shopReset").onclick = () => {
     const now = Date.now();
-    Object.keys(db.ticked).forEach(k => { db.tickedTs[k] = now; });
-    db.ticked = {};
+    const wk = db.weekStart + "|";
+    Object.keys(db.ticked).filter(k => k.startsWith(wk)).forEach(k => { db.tickedTs[k] = now; delete db.ticked[k]; });
     save(); renderShop(); toast("All unticked");
   };
   $("#shopCopy").onclick = async () => {
@@ -2894,7 +2923,7 @@ function renderShop(){
 
 $("#s-shop").addEventListener("click", e => {
   const b = e.target.closest("[data-k]"); if (!b) return;
-  const k = b.dataset.k;
+  const k = tickKey(b.dataset.k);
   if (db.ticked[k]) delete db.ticked[k]; else db.ticked[k] = 1;
   db.tickedTs[k] = Date.now();
   save(); renderShop();

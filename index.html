@@ -541,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-10-30c";
+const BUILD = "2026-10-30d";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -3115,16 +3115,69 @@ function prepForOcr(img){
   const d = ctx.getImageData(0, 0, c.width, c.height);
   const px = d.data;
 
-  // Greyscale, and build a histogram in the same pass.
-  const hist = new Array(256).fill(0);
+  // Greyscale.
   for (let i = 0; i < px.length; i += 4){
     const g = (px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114) | 0;
+    px[i] = px[i+1] = px[i+2] = g;
+  }
+
+  // Flatten the lighting. One threshold for the whole photo copes with a
+  // page that is dim all over, but not with one that is lit unevenly — a
+  // shadow from the spine or from whoever is holding the phone — where the
+  // shaded paper is darker than the threshold and the whole patch goes
+  // black. Measured on a test page, a single shadow took the reader from 0%
+  // to 60% wrong characters.
+  //
+  // So first estimate how bright the paper is at each spot: shrink the
+  // image until the text is a faint smudge, keep the brightest value in
+  // each neighbourhood so the smudge disappears, soften it, and stretch it
+  // back to full size. Dividing by that turns paper white wherever it is,
+  // shaded or not, while ink stays dark against its own local paper.
+  const sw = Math.max(8, Math.round(c.width / 12)), sh = Math.max(8, Math.round(c.height / 12));
+  ctx.putImageData(d, 0, 0);
+  const small = document.createElement("canvas");
+  small.width = sw; small.height = sh;
+  const sctx = small.getContext("2d");
+  sctx.imageSmoothingQuality = "high";
+  sctx.drawImage(c, 0, 0, sw, sh);
+  const sd = sctx.getImageData(0, 0, sw, sh), sp = sd.data;
+  let bg = new Uint8ClampedArray(sw * sh);
+  for (let i = 0; i < bg.length; i++) bg[i] = sp[i*4];
+  const pass = (src, r, pick) => {
+    const out = new Uint8ClampedArray(src.length);
+    for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++){
+      let acc = 0, n = 0;
+      for (let dy = -r; dy <= r; dy++){
+        const yy = Math.min(sh-1, Math.max(0, y+dy));
+        for (let dx = -r; dx <= r; dx++){
+          const v = src[yy*sw + Math.min(sw-1, Math.max(0, x+dx))];
+          if (pick === "max"){ if (v > acc) acc = v; } else { acc += v; n++; }
+        }
+      }
+      out[y*sw + x] = pick === "max" ? acc : acc / n;
+    }
+    return out;
+  };
+  bg = pass(pass(bg, 2, "max"), 2, "mean");
+  for (let i = 0; i < bg.length; i++) sp[i*4] = sp[i*4+1] = sp[i*4+2] = bg[i];
+  sctx.putImageData(sd, 0, 0);
+  const bgc = document.createElement("canvas");
+  bgc.width = c.width; bgc.height = c.height;
+  const bctx = bgc.getContext("2d");
+  bctx.imageSmoothingQuality = "high";
+  bctx.drawImage(small, 0, 0, c.width, c.height);
+  const bp = bctx.getImageData(0, 0, c.width, c.height).data;
+
+  const hist = new Array(256).fill(0);
+  for (let i = 0; i < px.length; i += 4){
+    const g = Math.min(255, Math.round(px[i] * 255 / Math.max(16, bp[i])));
     px[i] = px[i+1] = px[i+2] = g;
     hist[g]++;
   }
 
   // Otsu's threshold — finds the split between ink and paper for this
-  // photo rather than assuming one, which is what handles poor lighting.
+  // photo rather than assuming one. With the lighting flattened above, one
+  // split now holds across the whole page.
   const total = c.width * c.height;
   let sum = 0;
   for (let i = 0; i < 256; i++) sum += i * hist[i];
@@ -3157,6 +3210,101 @@ function looksLikeWords(text){
   if (toks.length < 25) return false;
   const hits = toks.filter(t => REAL.includes(t)).length;
   return hits / toks.length > 0.20;
+}
+
+/* ---- tidying what the reader got wrong ----
+   Character recognition misreads in a few predictable ways: l, i, t and
+   a stray ] or | stand in for one another, b for h, c for e, a for o, u
+   for y. That is where "oll", "broccoll" and "potata" come from. This puts
+   a word back only when the fix is one of those swaps and lands on exactly
+   one known word — so a garble that could be two things is left alone for
+   the user to fix in the box, rather than guessed at.
+
+   The danger is correcting a real word into a wrong one: "hake" into
+   "bake" looks right and gets missed, where "gartic" at least looks wrong.
+   Two guards stop that. The first letter is never changed (see tidyOcr).
+   And the known words include everyday English as well as recipe words,
+   with OCR_KEEP listing every word among the 30,000 most common in English
+   that would still otherwise sit one swap from a known word — checked by
+   running this over all 30,000 and requiring that none of them change. When a garble is equally close to a food word and an
+   everyday one ("oll": oil or all), the line decides: a line that opens
+   with a quantity is an ingredient. */
+const OCR_FOOD = "apple apples apricot apricots asparagus aubergine aubergines avocado avocados bacon baguette banana bananas basil bay bean beans beef beetroot berries biscuit biscuits blackberries blueberries bread breadcrumbs brie brioche broccoli broth butter buttermilk butternut cabbage cake capers caramel cardamom carrot carrots cashew cashews cauliflower cayenne celery cheddar cheese cherries cherry chestnut chestnuts chicken chickpea chickpeas chilli chillies chili chilies chives chocolate chorizo cider cinnamon clove cloves cocoa coconut cod coriander cornflour cornstarch courgette courgettes couscous crab cranberries cream cucumber cumin currants curry custard dates dill dough duck egg eggs fennel feta fillet fillets fish flour garlic gelatine gherkin gherkins ginger gnocchi granules grapes gravy haddock halloumi ham harissa hazelnut hazelnuts herbs honey horseradish icing jam jelly kale ketchup lamb lard leek leeks lemon lemons lemongrass lentils lettuce lime limes mackerel mango maple margarine marjoram mascarpone mayonnaise milk mince mint miso molasses mozzarella mushroom mushrooms mustard noodles nutmeg nuts oats oil olive olives onion onions orange oranges oregano paneer paprika parmesan parsley parsnip parsnips pasta pastry peach peaches peanut peanuts pear pears peas pecan pecans pepper peppercorns peppers pesto pine pineapple pistachio pistachios plum plums polenta pomegranate pork potato potatoes prawns prosciutto puree pumpkin quinoa radish radishes raisins raspberries rhubarb rice ricotta rocket rosemary saffron sage salad salami salmon salsa salt sardines sauce sausage sausages scallions seeds sesame shallot shallots sherry shrimp soy spaghetti spinach squash steak stock strawberries sugar sultanas swede sweetcorn syrup tahini tarragon thyme tofu tomato tomatoes tortilla tortillas treacle trout tuna turkey turmeric turnip vanilla veal vegetable vegetables vinegar walnut walnuts watercress wine yeast yoghurt yogurt zest florets floret cubes cube tbsp tsp tablespoon tablespoons teaspoon teaspoons";
+const OCR_WORDS = "beaten boiled boiling chopped cooked crumbled crushed cubed diced drained dried fresh freshly frozen grated ground halved heaped juice juiced large level lean low medium melted minced peeled pitted plain raw ripe roasted rinsed roughly raising shredded sifted sliced small smoked softened thinly thick thin toasted torn trimmed unsalted salted warm whole zested finely coarsely deseeded skinless boneless fat reduced light dark extra virgin caster granulated brown demerara double single soured sour sweet savoury spicy mild hot " +
+  "about add adding after again allow almost aside bake baked baking batter beat before bit blend boil bowl bring brush carefully centre center check chill combine cook cooking cool cover covered crisp cut cutting dish divide done drizzle each edges enough evenly few fill finish firm flip fold fry frying garnish gently golden grill half handful heat heated high keep knead layer leave lid lightly line lined little lower make mash meanwhile minute minutes mix mixture more once onto oven pan pans pinch place plate pour preheat prepare press reduce remaining remove rest return roast roll round saucepan scatter season serve serves serving set side simmer skillet slice slightly smooth soft some spoon spread sprinkle stir stirring stand stick taste tender through tin tins tip toss transfer tray turn until use using well whisk wok wrap degrees fan gas mark hour hours second seconds overnight cooled uncovered per makes portion portions recipe ingredients method instructions steps prep total time " +
+  "the and all also are as at be but by can do for from get has have if in into is it its just let like may no not of off on one only or our out over own same so such than that their them then there these they this those three to too two under up very was we what when where which while who will with within would you your";
+// Common English words one swap from a recipe word, kept as written.
+// Generated from the 30,000 most frequent English words; see the commit.
+const OCR_KEEP = "ai aj al ali alt arc atl bail bailed bailing bait baiting bali ball batted bc beal beit belt block bolt bolted boy bu butler cad chap cheek coal coat coated coke con cons cul da dane discord dork far gel hai hal hat heal healed horn hove ii il jetty kate law lei leon lh lord manga marc mare mau mi mini mj mou mt na nai nat nyt park pcr pius pocket pockets racket rail repeal roost row sa sail sailed salman say scar slack slick soil soiled stack ta tao thai thc troy usc wc wha whale white wilt witt worm";
+const OCR_SWAPS = { "]":"li", "|":"li", "!":"li", "1":"l", "0":"o", j:"i", i:"lt", l:"it", t:"l", h:"b", b:"h", e:"c", c:"e", a:"o", o:"a", y:"u", u:"y" };
+let ocrLex = null;
+function ocrLexicon(){
+  if (ocrLex) return ocrLex;
+  const food = new Set(), all = new Set();
+  const add = (set, txt) => String(txt).toLowerCase().split(/[^a-z]+/).forEach(w => { if (w.length > 1) set.add(w); });
+  add(food, OCR_FOOD); add(food, Object.keys(UNITS).join(" ")); add(food, AISLES.map(a => a[1].join(" ")).join(" "));
+  food.forEach(w => all.add(w));
+  [OCR_WORDS, OCR_KEEP, Object.keys(WORDNUM).join(" "), REAL.join(" "), [...STOP].join(" "),
+   COOK_VERBS.source.replace(/[^a-z|]/g, "")].forEach(t => add(all, t.replace(/\|/g, " ")));
+  return (ocrLex = { food, all, list: [...all] });
+}
+// Cost of turning a misread token into a word, counting only the swaps
+// above at 0.4 each, plus "rn"→m, "cl"→d, "vv"→w. Any other edit costs 1,
+// which puts the word out of reach.
+function ocrCost(tok, w){
+  const n = tok.length, m = w.length, D = [];
+  for (let i = 0; i <= n; i++){ D[i] = []; for (let j = 0; j <= m; j++) D[i][j] = i === 0 ? j : j === 0 ? i : 0; }
+  for (let i = 1; i <= n; i++) for (let j = 1; j <= m; j++){
+    const a = tok[i-1], b = w[j-1];
+    let c = Math.min(D[i-1][j] + 1, D[i][j-1] + 1,
+      D[i-1][j-1] + (a === b ? 0 : (OCR_SWAPS[a] || "").includes(b) ? 0.4 : 1));
+    if (i > 1){
+      const pair = tok[i-2] + a;
+      if ((pair === "rn" && b === "m") || (pair === "cl" && b === "d") || (pair === "vv" && b === "w")) c = Math.min(c, D[i-2][j-1] + 0.4);
+    }
+    D[i][j] = c;
+  }
+  return D[n][m];
+}
+function tidyOcr(text){
+  const L = ocrLexicon();
+  return String(text).split("\n").map(line => {
+    const ingredientLine = /^\s*[\d½⅓⅔¼¾⅛]/.test(line);
+    return line.replace(/[A-Za-z][A-Za-z\]|!]*|[\]|!][A-Za-z][A-Za-z\]|!]*/g, tok => {
+      const low = tok.toLowerCase(), letters = low.replace(/[^a-z]/g, "");
+      if (letters.length < 2 || L.all.has(low)) return tok;
+      const limit = low.length <= 3 ? 0.4 : 0.8;
+      let best = Infinity, hits = [];
+      for (const w of L.list){
+        // Only words whose first letter could be this token's (the same, or
+        // one of its swaps) can come within reach — the rest are skipped for
+        // speed. Swapped-first-letter words still count here, so they can
+        // make a misread ambiguous, but one is never applied (below).
+        if (w[0] !== low[0] && !(OCR_SWAPS[low[0]] || "").includes(w[0])) continue;
+        if (Math.abs(w.length - low.length) > 1) continue;
+        const c = ocrCost(low, w);
+        if (c < best - 1e-9){ best = c; hits = [w]; } else if (Math.abs(c - best) < 1e-9) hits.push(w);
+      }
+      if (best > limit) return tok;
+      if (hits.length > 1){
+        const food = hits.filter(w => L.food.has(w)), other = hits.filter(w => !L.food.has(w));
+        hits = ingredientLine ? (food.length === 1 ? food : []) : (other.length === 1 ? other : []);
+      }
+      if (hits.length !== 1) return tok;
+      const fix = hits[0];
+      // Never change the first letter. Every misread seen so far kept it
+      // ("potata", "broccoll", "gartic", "thsp"), while the dangerous pairs
+      // differ exactly there — hake/bake, time/lime, heat/beat — so this one
+      // rule protects every such word, however rare, without listing it.
+      // When the best fix would change it, the token is left as read — and
+      // because those candidates were still counted above, "oll" mid-method
+      // (oil or all?) is left alone rather than guessed as oil. A stray ] or
+      // | in first place is still read as the l or i it stood for.
+      if (fix[0] !== low[0] && !"]|!".includes(low[0])) return tok;
+      return tok === tok.toUpperCase() && tok.length > 1 ? fix.toUpperCase()
+           : /^[A-Z]/.test(tok) ? fix[0].toUpperCase() + fix.slice(1) : fix;
+    });
+  }).join("\n");
 }
 
 /* ============================================================
@@ -3431,7 +3579,7 @@ $("#readShots").onclick = async () => {
     try {
       const r = await ocrCanvas(prepForOcr(bakeShot(shots[i], 2000)),
         p => status("#ocrStatus", "Reading page " + (i+1) + " of " + shots.length + " — " + Math.round(p*100) + "%"));
-      all += (all ? "\n" : "") + r.text;
+      all += (all ? "\n" : "") + tidyOcr(r.text);
       conf = Math.max(conf, r.confidence);
     } catch(err){
       status("#ocrStatus", "Couldn't read page " + (i+1) + ": " + err.message, true);

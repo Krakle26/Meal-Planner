@@ -541,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-10-30b";
+const BUILD = "2026-10-30c";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1361,9 +1361,48 @@ function freshDb(){
    record throws and takes Home, Shelf and Fridge down with it, with no way
    back but wiping storage. Fill the gaps at the door rather than guarding
    every reader. */
+/* The meals a day holds. Named once so loading, merging, the batch helpers and every walk of the
+   plan agree on it — and declared here, ahead of normaliseDb, which runs at
+   startup and needs it before the rest of the script has. Dessert is a real slot — it shops, batches
+   and syncs like the others — but the plan only draws a row for it on days
+   that have one, since most days don't. */
+const SLOTS = ["lunch","dinner","dessert"];
+
+/* Ids and counts from outside — a restored backup, a merged file, the sync
+   store — go straight into the page as attribute values (data-open="…",
+   data-serves="…"), unescaped in a dozen places. Rather than escape each of
+   those and miss the next one, they are made safe here at the door: an id
+   is a plain token or it is replaced, a count is a small whole number. A
+   file crafted to break out of an attribute then has nothing to work with. */
+const SAFE_ID = /^[A-Za-z0-9_-]{1,64}$/;
+const safeId = v => typeof v === "string" && SAFE_ID.test(v) ? v : uid();
+const safeCount = (v, dflt) => Math.min(99, Math.max(1, parseInt(v) || dflt));
+
+function cleanPlan(plan){
+  const out = {};
+  for (const day in (plan || {})){
+    if (!/^\d{4}-\d\d-\d\d$/.test(day)) continue;
+    for (const sl of SLOTS){
+      const e = plan[day] && plan[day][sl];
+      if (!e || typeof e !== "object" || typeof e.id !== "string" || !SAFE_ID.test(e.id)) continue;
+      (out[day] = out[day] || {})[sl] = Object.assign(
+        { id: e.id, title: String(e.title || ""), serves: safeCount(e.serves, 4) },
+        e.batch ? { batch: true } : {});
+    }
+  }
+  return out;
+}
+
+function cleanLeftover(l){
+  if (!l || typeof l !== "object") return null;
+  const name = String(l.name || l.raw || "").trim();
+  if (!name) return null;
+  return Object.assign({}, l, { id: safeId(l.id), name, raw: String(l.raw || name) });
+}
+
 function normaliseRecipe(r){
   if (!r || typeof r !== "object") return null;
-  if (!r.id) r.id = uid();
+  r.id = safeId(r.id);
   if (typeof r.title !== "string" || !r.title) r.title = "Untitled recipe";
   r.tags = Array.isArray(r.tags) ? r.tags.filter(t => typeof t === "string") : [];
   r.ing = Array.isArray(r.ing) ? r.ing.filter(i => i && typeof i.name === "string") : [];
@@ -1387,9 +1426,9 @@ function normaliseDb(d){
   const base = freshDb();
   d = d && typeof d === "object" ? d : {};
   if (!Array.isArray(d.recipes)) d.recipes = base.recipes;
-  d.plan = d.plan || {};
+  d.plan = cleanPlan(d.plan);
   d.planTs = d.planTs || {};
-  d.leftovers = Array.isArray(d.leftovers) ? d.leftovers : [];
+  d.leftovers = (Array.isArray(d.leftovers) ? d.leftovers : []).map(cleanLeftover).filter(Boolean);
   d.ticked = d.ticked || {};
   d.tickedTs = d.tickedTs || {};
   d.deleted = d.deleted || {};
@@ -1506,6 +1545,7 @@ function mergeDb(local, remote){
     }
     out.planTs[key] = when;
   }
+  out.plan = cleanPlan(out.plan);
   // Drop plan entries whose recipe no longer exists anywhere.
   const live = new Set(out.recipes.map(r => r.id));
   for (const day in out.plan){
@@ -1531,7 +1571,7 @@ function mergeDb(local, remote){
   (remote.leftovers || []).forEach(l => {
     const k = leftoverKey(l);
     if (!k || seen.has(k) || buried(k, l)) return;
-    out.leftovers.push(l); seen.add(k);
+    const c = cleanLeftover(l); if (c){ out.leftovers.push(c); seen.add(k); }
   });
 
   // Ticking and unticking both have to cross. Unioning the ticked keys made
@@ -1709,11 +1749,6 @@ function stepSeconds(text){
 }
 
 
-/* The meals a day holds. Named once so the batch helpers below and every
-   walk of the plan agree on it. Dessert is a real slot — it shops, batches
-   and syncs like the others — but the plan only draws a row for it on days
-   that have one, since most days don't. */
-const SLOTS = ["lunch","dinner","dessert"];
 
 /* Puddings sort to the top of the dessert picker and are what "Add to plan"
    treats as a dessert. The seed shelf tags them "pudding"; "dessert" is

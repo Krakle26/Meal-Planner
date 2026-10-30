@@ -541,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-10-30a";
+const BUILD = "2026-10-30b";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1941,28 +1941,36 @@ $("#syncBtn").onclick = () => syncNow(false);
 // Tracks the last time any input/textarea actually had a keystroke, so
 // renderRecipes (below) can tell "mid-keystroke" apart from "merely
 // focused" — tapping into a field to look at it shouldn't block a redraw.
-let lastKeystroke = 0;
-document.addEventListener("input", e => {
-  if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") lastKeystroke = Date.now();
-}, true);
-
 /* renderRecipes is what the sync code calls after a merge: it redraws
    whichever screen is on, not just the two that list recipes. The shopping
    list and the fridge are built from the same records, and they were left
-   showing the shelf as it stood before the merge. A background sync can land
-   mid-keystroke though — on the Fridge's "add a leftover" box, Shelf's
-   search, or Settings' text fields — so skip the redraw while one of those
-   is being actively typed into rather than wipe what's half-typed; the next
-   sync or the next navigation picks the change up instead. A field that's
-   merely focused (cursor parked, nothing typed recently) doesn't hold up
-   the redraw. */
+   showing the shelf as it stood before the merge.
+
+   A background sync can land while something is half-typed — the Fridge's
+   "add a leftover" box, Shelf's search, a Settings field. Skipping the
+   redraw for two seconds after a keystroke wasn't enough: pause longer than
+   that and the sync wiped the box. So the redraw always happens, and what
+   was being typed is put back afterwards, cursor and all. The leftover box
+   is kept even when it isn't focused, since text there is a draft until it
+   is added. */
 function renderRecipes(){
-  const active = document.activeElement;
-  if (active && (active.tagName === "INPUT" || active.tagName === "TEXTAREA") &&
-      active.closest(".screen.on") && Date.now() - lastKeystroke < 2000) return;
   const draw = { home:renderHome, shelf:renderShelf, detail:renderDetail, plan:renderPlan,
                  shop:renderShop, fridge:renderFridge, set:renderSettings }[current];
-  if (draw) draw();
+  if (!draw) return;
+  const a = document.activeElement;
+  const held = a && a.id && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && a.closest(".screen.on")
+    ? { id: a.id, value: a.value, start: a.selectionStart, end: a.selectionEnd } : null;
+  const draft = $("#leftIn") ? $("#leftIn").value : "";
+  draw();
+  if (draft && $("#leftIn")) $("#leftIn").value = draft;
+  if (held){
+    const el = document.getElementById(held.id);
+    if (el){
+      el.value = held.value; el.focus();
+      // Number and url fields refuse a selection; the value is what matters.
+      try { el.setSelectionRange(held.start, held.end); } catch(e){}
+    }
+  }
 }
 
 /* ============================================================
@@ -2482,6 +2490,10 @@ async function attachPhoto(r, file){
   toast("Adding the photo…");
   try {
     const img = await loadImage(file);
+    // A sync can replace db with a fresh copy while the image loads; writing
+    // to the recipe object from before the wait would store nothing.
+    r = db.recipes.find(x => x.id === r.id);
+    if (!r) return toast("That recipe was removed while the photo was loading");
     const url = fitCanvas(img, 640).toDataURL("image/jpeg", 0.65);
     const before = r.image;
     r.image = url;
@@ -2524,6 +2536,10 @@ ${list}`;
     const data = await res.json();
     const txt = (data.content||[]).filter(c => c.type === "text").map(c => c.text).join("").replace(/```json|```/g,"").trim();
     const j = JSON.parse(txt);
+    // Same as attachPhoto: the request takes seconds, and a sync in that time
+    // leaves the recipe captured before it orphaned.
+    r = db.recipes.find(x => x.id === r.id);
+    if (!r) return toast("That recipe was removed while estimating");
     r.nutrition = {
       kcal:j.kcal ?? null, fat:j.fat ?? null, sat:j.sat ?? null, carbs:j.carbs ?? null,
       sugars:j.sugars ?? null, protein:j.protein ?? null, sodiumMg:j.sodiumMg ?? null,
@@ -3718,7 +3734,12 @@ $("#mergeFile").addEventListener("change", e => {
 });
 
 $("#expBtn").onclick = () => {
-  const blob = new Blob([JSON.stringify(db,null,2)], { type: "application/json" });
+  // Credentials stay on the device. The GitHub token and API key used to
+  // ride along in every backup, so sharing one shared both.
+  const copy = JSON.parse(JSON.stringify(db));
+  delete copy.sync;
+  if (copy.settings) copy.settings.apiKey = "";
+  const blob = new Blob([JSON.stringify(copy,null,2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "mise-backup-" + todayISO() + ".json";
@@ -3736,7 +3757,13 @@ $("#impFile").addEventListener("change", e => {
       // A copy sent from another device is missing the sync block, and a file
       // written by an older build is missing whatever came later. Fill in the
       // gaps rather than handing the app a half-built shelf.
-      db = normaliseDb(j); save();
+      // Restoring brings back recipes and plans, not another device's
+      // credentials or sync store — older backups carry both, and restoring
+      // one used to swap this device's sync for whatever the file held.
+      const sync = db.sync, apiKey = db.settings.apiKey;
+      db = normaliseDb(j);
+      db.sync = sync; db.settings.apiKey = apiKey;
+      save();
       toast("Backup restored"); go("shelf");
     } catch(err){ toast("That file is not a Mise backup"); }
     e.target.value = "";

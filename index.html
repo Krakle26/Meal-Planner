@@ -541,7 +541,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-10-30d";
+const BUILD = "2026-11-10a";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -640,14 +640,38 @@ function parseIngredient(raw){
   let qty = null, unit = "";
   const numRe = /^(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+\s*[½⅓⅔¼¾⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚]|[½⅓⅔¼¾⅛⅜⅝⅞⅕⅖⅗⅘⅙⅚]|\d+(?:\.\d+)?)\s*/;
   let m = line.match(numRe);
-  if (m) { qty = numFrom(m[1]); line = line.slice(m[0].length); }
+  if (m) {
+    qty = numFrom(m[1]); line = line.slice(m[0].length);
+    // A range ("2-3 tbsp", "2 to 3 cloves"). Only the first number was read,
+    // leaving "-3 tbsp olive oil" as the ingredient's name with no unit. The
+    // upper figure is kept: a shopping list that buys for the top of the
+    // range never comes up short.
+    const range = line.match(new RegExp("^(?:[-–—]|to\\s+)\\s*" + numRe.source.slice(1), "i"));
+    if (range && numFrom(range[1]) !== null){ qty = Math.max(qty, numFrom(range[1])); line = line.slice(range[0].length); }
+    // A count of packs ("1 x 400g tin chopped tomatoes"). The "x 400g tin"
+    // used to stay in the name. With a tin or pack named, the count is the
+    // quantity and the size moves to the note; with none ("2 x 150g salmon
+    // fillets") the two multiply into one weight.
+    const times = line.match(/^[x×]\s*(\d+(?:\.\d+)?)\s*(g|kg|ml|l|oz|lb)\b\.?\s*/i);
+    if (times){
+      const rest = line.slice(times[0].length), holder = rest.match(/^([a-z]+)\b\.?\s*/i);
+      const held = holder && UNITS[holder[1].toLowerCase()];
+      if (held === "tin" || held === "pack"){
+        unit = held; line = rest.slice(holder[0].length);
+        note = times[1] + times[2].toLowerCase() + (note ? ", " + note : "");
+      } else {
+        qty = qty * parseFloat(times[1]); unit = UNITS[times[2].toLowerCase()]; line = rest;
+      }
+    }
+  }
   else {
     const w = line.match(/^(a|an|one|two|three|four|five|six|seven|eight|nine|ten|twelve|half|quarter)\s+(of\s+)?/i);
     if (w) { qty = WORDNUM[w[1].toLowerCase()]; line = line.slice(w[0].length); }
   }
   // "400g" style — unit glued to number
   const glued = line.match(/^(g|kg|ml|l|oz|lb)\b\.?\s*/i);
-  if (glued && qty !== null) { unit = UNITS[glued[1].toLowerCase()]; line = line.slice(glued[0].length); }
+  if (unit) { /* already settled by the "N x size" form above */ }
+  else if (glued && qty !== null) { unit = UNITS[glued[1].toLowerCase()]; line = line.slice(glued[0].length); }
   else {
     const u = line.match(/^([a-z]+)\b\.?\s*/i);
     if (u && UNITS[u[1].toLowerCase()]) { unit = UNITS[u[1].toLowerCase()]; line = line.slice(u[0].length); }
@@ -1695,6 +1719,11 @@ async function syncNow(quiet){
       const { db: merged, stats } = mergeDb(db, remote);
       const sync = db.sync;
       db = merged; db.sync = sync;
+      // Redraw now, not after the write. Screens hold on to the records
+      // they drew from; until they redraw, a tap on the star edits the copy
+      // just replaced, says it worked, and saves nothing — for the length of
+      // the upload, or for good if the upload fails.
+      Store.save(db); renderRecipes();
       if (!quiet && (stats.added || stats.updated || stats.removed)){
         toast("Merged: " + stats.added + " new, " + stats.updated + " updated");
       }
@@ -3411,7 +3440,13 @@ $("#btnGallery").onclick = () => $("#photoIn").click();
 
 $("#shotList").addEventListener("click", e => {
   const rot = e.target.closest("[data-rot]");
-  if (rot){ const s = shots.find(x => x.id === rot.dataset.rot); s.rot += 90; renderShots(); return; }
+  if (rot){
+    const s = shots.find(x => x.id === rot.dataset.rot); s.rot += 90;
+    // The crop is a fraction of the page as it stands, so a quarter turn has
+    // to turn it too, or the same numbers pick out a different part.
+    if (s.crop){ const c = s.crop; s.crop = { x: 1 - (c.y + c.h), y: c.x, w: c.h, h: c.w }; }
+    renderShots(); return;
+  }
   const del = e.target.closest("[data-del]");
   if (del){ shots = shots.filter(x => x.id !== del.dataset.del); renderShots(); return; }
   const crop = e.target.closest("[data-crop]");
@@ -3420,7 +3455,10 @@ $("#shotList").addEventListener("click", e => {
 
 /* ---- crop ---- */
 function openCrop(shot){
-  const url = bakeShot(shot, 1000).toDataURL("image/jpeg", 0.85);
+  // Show the whole page, with the box where the crop already is. Showing
+  // the cropped result meant a second crop was drawn on the cropped picture
+  // but applied to the whole page, so it selected somewhere else.
+  const url = bakeShot({ img: shot.img, rot: shot.rot, crop: null }, 1000).toDataURL("image/jpeg", 0.85);
   openSheet("Crop to the recipe",
     '<p class="muted" style="margin-top:-6px">Drag the corners. Leave out page numbers, headers and anything on the facing page.</p>' +
     '<div class="cropwrap" id="cropWrap"><img id="cropImg" src="' + url + '" alt="">' +
@@ -3617,8 +3655,20 @@ $("#parseRaw").onclick = () => {
 // Recipe pages can't be fetched straight from the browser — other sites
 // don't allow it. Try each route in turn and keep the reasons, so a
 // failure says what went wrong rather than just "failed".
-async function fetchPage(url, onTry){
+async function fetchPage(url, onTry, usable){
   const tried = [];
+  // A relay can answer 200 with the site's "Access denied" or "Just a
+  // moment…" page. Taking the first answer as the page meant the other
+  // relays were never tried. Each answer is now checked for a recipe; the
+  // first one without is kept only as a last resort, so the caller can
+  // still say what loaded.
+  let spare = null;
+  const take = (html, via) => {
+    if (!usable || usable(html)) return { html, via };
+    if (!spare) spare = { html, via };
+    tried.push(via.replace(/^the /, "") + ": no recipe in what came back");
+    return null;
+  };
 
   // 1. Your own function, on a host that runs server code. Best route when
   //    it exists: no relay operator sees the recipe address.
@@ -3635,8 +3685,8 @@ async function fetchPage(url, onTry){
     const res = await fetch("/.netlify/functions/fetch-recipe?url=" + encodeURIComponent(url));
     if (res.ok){
       const j = await res.json();
-      if (j.html) return { html: j.html, via: "your own fetcher" };
-      tried.push("your fetcher: " + (j.error || "empty reply"));
+      if (j.html){ const got = take(j.html, "your own fetcher"); if (got) return got; }
+      else tried.push("your fetcher: " + (j.error || "empty reply"));
     } else if (res.status !== 404){
       tried.push("your fetcher: error " + res.status);
     }
@@ -3662,12 +3712,14 @@ async function fetchPage(url, onTry){
       if (!res.ok){ tried.push(r.name + ": error " + res.status); continue; }
       const html = await res.text();
       if (!html || html.length < 200){ tried.push(r.name + ": empty page"); continue; }
-      return { html, via: "the " + r.name };
+      const got = take(html, "the " + r.name);
+      if (got) return got;
     } catch(e){
       tried.push(r.name + ": " + (e.name === "TimeoutError" ? "timed out" : "blocked or offline"));
     }
   }
 
+  if (spare) return spare;
   const err = new Error("Nothing could reach that page");
   err.detail = tried.join(" · ");
   throw err;
@@ -3678,7 +3730,8 @@ $("#fetchLink").onclick = async () => {
   if (!/^https?:\/\//.test(url)) return status("#linkStatus", "That does not look like a web address.", true);
   status("#linkStatus", "Fetching…");
   try {
-    const { html, via } = await fetchPage(url, msg => status("#linkStatus", msg));
+    const { html, via } = await fetchPage(url, msg => status("#linkStatus", msg),
+      h => { const f = extractRecipe(h); return !!(f && f.d && f.d.ing.length); });
     status("#linkStatus", "Reading the page…");
 
     let found = extractRecipe(html);

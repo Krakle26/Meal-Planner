@@ -483,6 +483,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
           <input type="text" id="syncCode" placeholder="connect first">
         </label>
         <button class="btn line full" id="syncJoin">Use that code on this device</button>
+        <button class="btn ghost full" id="syncForget" style="margin-top:10px">Disconnect from this store</button>
       </div>
       <div id="syncFile" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--line)">
         <p class="help" style="margin-bottom:12px">No account needed: send a copy to another device and merge it there. Nothing is overwritten — newer edits win on both sides.</p>
@@ -541,7 +542,7 @@ p.help{font-size:13px;color:var(--muted);margin:-6px 0 0;line-height:1.45}
 <div class="toast" id="toast"></div>
 
 <script>
-const BUILD = "2026-11-10a";
+const BUILD = "2026-11-10b";
 const KEY = "mise.v1";
 const Store = (() => {
   let ok = false;
@@ -1283,9 +1284,43 @@ function aisleOf(name, unit){
 /* ============================================================
    SEED SHELF — a starting set so leftovers have something to match
    ============================================================ */
+/* The starter recipes carry the same id on every device. They used to get a
+   random one per install, and since a merge matches recipes by id, joining
+   two fresh devices showed every starter recipe twice. canonSeeds moves
+   shelves made before this onto the shared ids — and collapses the doubles
+   an earlier join already left — carrying plan entries along. A starter
+   recipe that has been renamed is the user's own by then and is left be. */
+const seedId = title => "seed-" + String(title).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+let seedTitleSet = null;
+function canonSeeds(d){
+  if (!d || !Array.isArray(d.recipes)) return d;
+  seedTitleSet = seedTitleSet || new Set(seedRecipes().map(r => r.title));
+  const moved = {};
+  d.recipes.forEach(r => {
+    if (!r || r.source !== "Built in" || !seedTitleSet.has(r.title) || r.id === seedId(r.title)) return;
+    moved[r.id] = seedId(r.title); r.id = moved[r.id];
+  });
+  const best = {};
+  d.recipes.forEach(r => {
+    if (!r) return;
+    const b = best[r.id];
+    if (!b){ best[r.id] = r; return; }
+    const keep = (r.updated || 0) > (b.updated || 0) ? r : b, drop = keep === r ? b : r;
+    keep.fav = !!(keep.fav || drop.fav);
+    if (!keep.image && drop.image) keep.image = drop.image;
+    best[r.id] = keep;
+  });
+  d.recipes = d.recipes.filter(r => r && best[r.id] === r);
+  for (const day in (d.plan || {})) for (const sl in (d.plan[day] || {})){
+    const e = d.plan[day][sl];
+    if (e && moved[e.id]) e.id = moved[e.id];
+  }
+  return d;
+}
+
 function seedRecipes(){
   const R = (title,mins,serves,tags,ing,steps) => ({
-    id: uid(), title, mins, serves, tags, fav:false, source:"Built in", image:"",
+    id: seedId(title), title, mins, serves, tags, fav:false, source:"Built in", image:"",
     ing: ing.map(parseIngredient).filter(Boolean), steps, added: Date.now(), updated: Date.now()
   });
   return [
@@ -1472,6 +1507,7 @@ function normaliseDb(d){
   for (const m of [d.ticked, d.tickedTs])
     for (const k of Object.keys(m)) if (!dated.test(k) || k.slice(0,10) < keepFrom) delete m[k];
   d.recipes = d.recipes.map(normaliseRecipe).filter(Boolean);
+  canonSeeds(d);
   return d;
 }
 
@@ -1513,6 +1549,7 @@ function leftoverKey(l){
 
 function mergeDb(local, remote){
   const out = JSON.parse(JSON.stringify(local));
+  canonSeeds(remote);
   const stats = { added: 0, updated: 0, removed: 0 };
   if (!remote || !Array.isArray(remote.recipes)) return { db: out, stats };
 
@@ -1535,7 +1572,10 @@ function mergeDb(local, remote){
     if (!mine){ byId[r.id] = r; stats.added++; }
     else if (stamp(r) > stamp(mine)){
       // A remote copy sent without photos must not delete the one here.
-      if (!r.image && mine.image) r.image = mine.image;
+      // …which only applies when the sender says it stripped them. Doing it
+      // for every photo-less copy meant "Remove photo" never reached the
+      // other device, which kept the photo and later handed it back.
+      if (remote.photosStripped && !r.image && mine.image) r.image = mine.image;
       byId[r.id] = r; stats.updated++;
     }
   });
@@ -3844,6 +3884,7 @@ function renderSettings(){
   $("#syncPanel").style.display = on ? "" : "none";
   $("#syncToken").value = db.sync.token || "";
   $("#syncCode").value = db.sync.gistId || "";
+  $("#syncForget").style.display = db.sync.gistId ? "" : "none";
   $("#syncState").textContent = !db.sync.gistId
     ? "Not connected yet."
     : "Connected. Last synced " + (db.sync.lastSync ? new Date(db.sync.lastSync).toLocaleString("en-GB") : "never") + ".";
@@ -3918,9 +3959,26 @@ $("#syncConnect").onclick = async () => {
 
 $("#syncNowBtn").onclick = () => syncNow(false);
 
+/* A store code is the gist's id. A pasted gist address is accepted too,
+   since that is what GitHub shows. */
+const storeCode = v => { const m = String(v).trim().match(/([0-9a-f]{20,40})\/?$/i); return m ? m[1].toLowerCase() : null; };
+
+$("#syncForget").onclick = () => {
+  openSheet("Disconnect from this store?",
+    '<p class="muted" style="margin-top:-6px">This device stops syncing with it. Your recipes stay here, and the store itself is not deleted. Connect afterwards makes a new store; a code from another device joins theirs.</p>' +
+    '<button class="btn danger full" id="forgetYes" style="margin-top:14px">Disconnect</button>' +
+    '<button class="btn ghost full" id="forgetNo" style="margin-top:10px">Cancel</button>');
+  $("#forgetNo").onclick = closeSheet;
+  $("#forgetYes").onclick = () => {
+    db.sync.gistId = ""; db.sync.lastSync = 0; Store.save(db);
+    closeSheet(); renderSettings(); toast("Disconnected");
+  };
+};
+
 $("#syncJoin").onclick = () => {
-  const code = $("#syncCode").value.trim();
-  if (!code) return toast("Paste the code from your other device");
+  const code = storeCode($("#syncCode").value);
+  if (!$("#syncCode").value.trim()) return toast("Paste the code from your other device");
+  if (!code) return toast("That does not look like a store code");
   if (!db.sync.token) return toast("Add a token on this device too");
   openSheet("Join that store?",
     '<p class="muted" style="margin-top:-6px">This device will merge with the shelf already there. Nothing on either side is deleted — where both have changed the same recipe, the newer edit wins.</p>' +
@@ -3928,8 +3986,12 @@ $("#syncJoin").onclick = () => {
     '<button class="btn ghost full" id="joinNo" style="margin-top:10px">Cancel</button>');
   $("#joinNo").onclick = closeSheet;
   $("#joinYes").onclick = async () => {
-    db.sync.gistId = code; db.sync.mode = "gist"; Store.save(db);
     closeSheet();
+    // Look before leaping. The pasted code used to replace the working one
+    // unchecked, and with no way to clear it a typo left sync dead for good.
+    try { await gistCall("/gists/" + code, { method: "GET" }); }
+    catch(err){ return toast("Could not open that store (" + err.message + "). Nothing was changed."); }
+    db.sync.gistId = code; db.sync.mode = "gist"; Store.save(db);
     await syncNow(false);
     renderSettings(); go("shelf");
   };
@@ -3999,6 +4061,15 @@ $("#impFile").addEventListener("change", e => {
       const sync = db.sync, apiKey = db.settings.apiKey;
       db = normaliseDb(j);
       db.sync = sync; db.settings.apiKey = apiKey;
+      // Restoring is a deliberate, new change, so it is stamped as one. With
+      // the backup's own older dates, the sync that follows saw a deletion
+      // newer than the restored recipe and removed it again seconds later —
+      // undoing the one thing the restore was for.
+      const now = Date.now();
+      db.recipes.forEach(r => { r.updated = now; });
+      db.leftovers.forEach(l => { l.added = now; });
+      for (const day in db.plan) for (const sl in db.plan[day]) db.planTs[day + "|" + sl] = now;
+      db.settingsTs = now;
       save();
       toast("Backup restored"); go("shelf");
     } catch(err){ toast("That file is not a Mise backup"); }

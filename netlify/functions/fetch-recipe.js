@@ -11,7 +11,9 @@
 // name that resolves to a private one, which would need a resolve-then-pin
 // fetch the platform doesn't offer here.
 function isPrivateHost(hostname) {
-  const h = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "");
+  // A trailing dot is the same host written out in full ("localhost."), and
+  // it walked straight past every name check below.
+  const h = String(hostname || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.+$/, "");
   if (!h) return true;
   if (h === "localhost" || h.endsWith(".localhost") || h.endsWith(".internal")) return true;
 

@@ -4,7 +4,7 @@
 // on the next load, and a cached copy is only a fallback for when there is
 // no signal. Static files are served cache-first and refreshed in the
 // background. Bump CACHE whenever the shell changes.
-const CACHE = "mise-v41";
+const CACHE = "mise-v42";
 const SHELL = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (e) => {
@@ -45,6 +45,15 @@ self.addEventListener("fetch", (e) => {
     (req.headers.get("accept") || "").includes("text/html");
 
   if (isPage) {
+    // Only the app's own page is kept as the offline copy. Every navigation
+    // used to be stored under index.html, so opening version.txt or the
+    // manifest in a tab replaced the offline app with that file.
+    const scope = new URL(self.registration.scope).pathname;
+    const isApp = url.pathname === scope || url.pathname === scope + "index.html";
+    if (!isApp) {
+      e.respondWith(fetch(req).catch(() => caches.match(req).then((hit) => hit || Response.error())));
+      return;
+    }
     e.respondWith(
       fetch(req)
         .then((res) => {
